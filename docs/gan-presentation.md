@@ -1,5 +1,5 @@
 ---
-title: "General Adversarial Nets"
+title: "Generative Adversarial Nets"
 author: Richard Godden and Yogesh Garg
 date: \today
 output:
@@ -15,11 +15,48 @@ output:
 	 * 13: Graphics
 	 * 14: Animations
 	 * 15: Themese, let's stick with warsaw, but read if interested
+
+        create pdf with pandoc -t beamer gan-presentation.md -V theme:Warsaw -o gan-presentation.pdf
+'
 -->
 
+# Introduction
+## What are Generative models?
+ * have a data set of training examples x_i ~ p_data(z)
+ * want to be able to generate new examples x_j ~ p_model(z)
+ * want that p_model is aproximatel p_data
+
+## Why Generative mode
+ * many tasks require it
+ * unsupervised learning
+ * clean up noisy or missing data
+ * reinforcement learning
+
+## Game theory
+ * zero sum game
+ * equilibrium
+
+## Adversarial networks
+ * Game between two players
+ * Generator:
+ ** tries to create fake samples that look like the real thing
+ * Descriminator:
+ ** tries to tell which are fake and which are real
+
+
 # Methods
+## Definitions
+ * Z some data space
+ * X an object (generated or real)
+ * Generator G: Z -> X 
+ * Descriminator D: X -> {0,1}
+
 ## Equations
+
 ### Discriminator loss
+D tries to identify fakes
+$\underset{D}{\operatorname{argmax}}\mathbb{E}_{x~p_{data}(x)}(\log D(G(x))) + \mathbb{E}_{z~p_{z}(z)}(\log(1- D(G(z))))$
+
 ### Generator loss
 ## Algorithms
  * https://www.youtube.com/watch?v=CILzNj2MP3s
