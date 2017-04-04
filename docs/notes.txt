@@ -1,0 +1,11 @@
+* definition of KL-divergence
+* correct last equation on theoretical result 1
+* label axes in saddle-gd
+* syntetic
+
+* skip advantages based on other models
+
+* show the video first
+* start video 1 frmo 18 seconds
+* richard to send 2d mnist interpolation
+* theoretical results is a heading right now
