@@ -6,24 +6,6 @@ output:
     beamer_presentation:
         slide_level: 2
 ---
-<!--
-# Links
- * Tutorial : http://pages.stat.wisc.edu/~yandell/statgen/ucla/Help/Producing%20slide%20shows%20with%20Pandoc.html
- * beamer full documentation: http://ctan.math.utah.edu/ctan/tex-archive/macros/latex/contrib/beamer/doc/beameruserguide.pdf
-    - Full documentation is not required since we want pandoc to do most of the heavy lifting
-    - Yet, it may be required to go through sections:
-    - 13: Graphics
-    - 14: Animations
-    - 15: Themese, let's stick with warsaw, but read if interested
-
-        create pdf with pandoc -t beamer gan-presentation.md -V theme:Warsaw -o gan-presentation.pdf
-# Samples
- * image:
-        ![](imgs/gan-eqn3.png)
- * scaled image:
-        \centerline{\includegraphics[width=0.75\textwidth]{imgs/gan-eqn3.png}}
-
--->
 
 # Introduction
 
