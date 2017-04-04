@@ -29,9 +29,9 @@ output:
 # Introduction
 
 ## What are Generative models?
- * have a data set of training examples x_i ~ p_data(x)
- * want to be able to generate new examples x_hat ~ p_model(x)
- * want that p_model is aproximatel p_data
+ * have a data set of training examples $x_{i} \sim p_{data}(x)$
+ * want to be able to generate new examples $x_{hat} \sim p_{model}(x)$
+ * want that $p_{model} \approx  p_{data}$
 
 ## Why Generative models
  * task requirements
@@ -64,8 +64,8 @@ output:
 ## Definitions
  * Z some latent space
  * X a data point (generated or real)
- * Generator G: Z -> X
- * Descriminator D: X -> {0,1}
+ * Generator G(z): Z -> X
+ * Descriminator D(x): X -> {0,1}
 ![](imgs/gan_flow.png)
 
 ## Equations
@@ -78,7 +78,9 @@ output:
 * in practice learning for G may be bad with equation above so maximize $\log(D(G(z)))$
 
 ## Algorithms
-* \url{https://www.youtube.com/watch?v=CILzNj2MP3s}
+![](imgs/algorithm.png)
+
+\url{https://www.youtube.com/watch?v=CILzNj2MP3s}
 
 
 # Theorertical Results
