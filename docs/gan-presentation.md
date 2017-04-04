@@ -27,6 +27,7 @@ output:
 -->
 
 # Introduction
+
 ## What are Generative models?
  * have a data set of training examples x_i ~ p_data(x)
  * want to be able to generate new examples x_hat ~ p_model(x)
@@ -40,36 +41,42 @@ output:
 
 ## Game theory
  * zero sum game with mixed strategy equilibrium
- ![](imgs/rpc.png)
  * Minimax: nash equilibrium at saddle point
- ![](imgs/saddle.png)
+\centerline{
+\includegraphics[width=0.5\textwidth]{imgs/rpc.png}
+\includegraphics[width=0.5\textwidth]{imgs/Saddle.png}
+}
 
 ## Adversarial networks
- * Game between two players
-    -mixed strategy equilibrium when one learns to generate data
+ * Game between two players, mixed strategy equilibrium when one learns to generate data
 
- * Generator:
-    -tries to create fake samples that look like the real thing
+ * Generator tries to create fake samples that appear real
 
- * Descriminator:
-    -tries to tell which are fake and which are real
+ * Descriminator tries to tell which are fake and which are real
+
+\centerline{
+\includegraphics[width=0.3\textwidth]{imgs/descriminator.png}
+\includegraphics[width=0.3\textwidth]{imgs/generator.png}
+}
 
 
 # Methods
 ## Definitions
- * Z some data space
- * X an object (generated or real)
- * Generator G: Z -> X 
+ * Z some latent space
+ * X a data point (generated or real)
+ * Generator G: Z -> X
  * Descriminator D: X -> {0,1}
 ![](imgs/gan_flow.png)
 
 ## Equations
+* Minimax
+![](imgs/loss.png)
+* Discriminator
+![](imgs/loss-D.png)
+* Generator
+![](imgs/loss-G.png)
+* in practice learning for G may be bad with equation above so maximize $\log(D(G(z)))$
 
-### Discriminator loss
-D tries to identify fakes
-
-
-### Generator loss
 ## Algorithms
 * \url{https://www.youtube.com/watch?v=CILzNj2MP3s}
 
@@ -138,7 +145,7 @@ Most important challenges include:
 
 ----
 
-* Mean of gaussian example 
+* Mean of gaussian example
     - \url{https://www.youtube.com/watch?v=mObnwR-u8pc}
     - \url{https://www.youtube.com/watch?v=0r3g7-4bMYU}
 
@@ -155,4 +162,3 @@ Most important challenges include:
 
 * Faces turn\footnote{Radford, A., Metz, L., Chintala, S.: Unsupervised representation learning with deep convolutional generative adversarial networks. In: ICLR (2016)}
 ![](imgs/dcgan-fig-8.jpeg)
-
