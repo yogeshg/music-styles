@@ -6,7 +6,6 @@ output:
     beamer_presentation:
         slide_level: 2
 ---
-
 <!--
 # Links
  * Tutorial : http://pages.stat.wisc.edu/~yandell/statgen/ucla/Help/Producing%20slide%20shows%20with%20Pandoc.html
@@ -29,30 +28,39 @@ output:
 # Introduction
 
 ## What are Generative models?
- * have a data set of training examples $x_{i} \sim p_{data}(x)$
- * want to be able to generate new examples $x_{hat} \sim p_{model}(x)$
- * want that $p_{model} \approx  p_{data}$
+### The aim
+* have a data set of training examples $x_{i} \sim p_{data}(x)$
+* want to be able to generate new examples $\hat{x} \sim p_{g}(x)$
+* want that $p_{g} \approx  p_{data}$
+
+### Example models
+* Hidden Markov models
+* Graphical models (directed/undirected)
+* Restricted Boltzmann Machines
+* Generative autoencoders
 
 ## Why Generative models
- * task requirements
- * unsupervised learning
- * clean up noisy or missing data
- * reinforcement learning
+* useful or required for many tasks
+    - generating realistic audio from text (text to speach)
+    - machine translation 
+* clean up noisy or missing data
+\centerline{\includegraphics[width=0.60\textwidth]{imgs/inpainting.png}}
+* unsupervised learning
+    - can be used to learn features from raw data
+    - "What I cannot create I do not understand" Richard Feynman
 
 ## Game theory
  * zero sum game with mixed strategy equilibrium
  * Minimax: nash equilibrium at saddle point
 \centerline{
-\includegraphics[width=0.5\textwidth]{imgs/rpc.png}
+\includegraphics[width=0.4\textwidth]{imgs/rpc.png}
 \includegraphics[width=0.5\textwidth]{imgs/Saddle.png}
 }
 
 ## Adversarial networks
- * Game between two players, mixed strategy equilibrium when one learns to generate data
-
- * Generator tries to create fake samples that appear real
-
- * Descriminator tries to tell which are fake and which are real
+* Game between two players, mixed strategy equilibrium when one learns to generate data
+* Generator tries to create fake samples that appear real
+* Descriminator tries to tell which are fake and which are real
 
 \centerline{
 \includegraphics[width=0.3\textwidth]{imgs/descriminator.png}
@@ -62,13 +70,13 @@ output:
 
 # Methods
 ## Definitions
- * Z some latent space
- * X a data point (generated or real)
- * Generator G(z): Z -> X
- * Descriminator D(x): X -> {0,1}
+* Z some latent space
+* X a data point (generated or real)
+* Generator $G(z): Z \to X$
+* Descriminator $D(x): X \to \{0,1\}$
 ![](imgs/gan_flow.png)
 
-## Equations
+## Loss functions
 * Minimax
 ![](imgs/loss.png)
 * Discriminator
@@ -78,10 +86,9 @@ output:
 * in practice learning for G may be bad with equation above so maximize $\log(D(G(z)))$
 
 ## Algorithms
-![](imgs/algorithm.png)
-
-\url{https://www.youtube.com/watch?v=CILzNj2MP3s}
-
+* the algorithm
+\includegraphics[width=0.8\textwidth]{imgs/algorithm.png}
+* \url{https://www.youtube.com/watch?v=CILzNj2MP3s}
 
 # Theorertical Results
 
