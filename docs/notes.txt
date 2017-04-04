@@ -1,3 +1,35 @@
+Richard:
+* introduce us and sections we will do
+
+What Gen?
+* aim of gen models
+* examples a few of which we have seen before
+-hmm text to speach
+-generative autoencoders
+
+Why useful?
+
+Game theory
+* explain mixed strategy equilibrium
+
+Adversarial networks
+* mixed strategy because otherwise adversary 
+will learn the non mixed data point
+* Yogesh will show why the equilibrium occours when generate data
+* paper introduces the general concept but limits its investigations to multilayer perceptrons
+
+
+Loss fn
+* in practice better because when G is poor D can reject all samples trivially
+  so log(1-D) saturates and not sufficient gradient for G to learn
+
+Algo
+* first two are essentially create m generated data and sample m from the training set
+* video shows a 2d example 
+ - blue training data
+ - red generated
+ - red blue is the soft threshold of descriminator
+
 * definition of KL-divergence
 * correct last equation on theoretical result 1
 * label axes in saddle-gd
