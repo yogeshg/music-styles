@@ -108,9 +108,29 @@ model's distribution and the data generating process
 
 ## Convergence of training algorithm
 
+* Proof
+    - Sub derivatives at optimal lie in sub derivatives of the overall function
+    - So the training algorithm is equivalent to computing gradient descent at optimal
+    ![](imgs/gan-proof2.png)
+
+----
+
+* Not sure if...
+![](imgs/Futurama-Fry.jpg)
+
+----
+
+* Intuition\
+![](imgs/saddle-gd.png)
+
+----
+
+
 ## Experimental
+* Log likelyhoods for MNIST and TFD
 ![](imgs/gan-tbl1.png)
-{}
+* a syntetic measure, based on Parzen window estimates of $P_{data}$
+* need for robust measure for generative models in general
 
 # Conclusions
 
@@ -145,7 +165,7 @@ Most important challenges include:
 
 ----
 
-* Mean of gaussian example
+* Generator collapses to the mean
     - \url{https://www.youtube.com/watch?v=mObnwR-u8pc}
     - \url{https://www.youtube.com/watch?v=0r3g7-4bMYU}
 
