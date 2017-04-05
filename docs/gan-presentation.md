@@ -72,14 +72,14 @@ output:
 \includegraphics[width=0.8\textwidth]{imgs/algorithm.png}
 * \url{https://www.youtube.com/watch?v=CILzNj2MP3s}
 
-# Theorertical Results
+# Results
 
 ##  Optimal value for the objective function
 * For a fixed $G$ aim of discriminator $D$ is to maximize $V(G,D)$
 ![](imgs/gan-eqn1.png)
 \
 ![](imgs/gan-eqn3.png)
-* using $argmax (a log(y) + b log(1-y)) = \frac{a}{a+b}$, we get
+* using $argmax (a \cdot log(y) + b \cdot log(1-y)) = \frac{a}{a+b}$, we get
 ![](imgs/gan-eqn2.png)
 * Now the aim of $G$ is to minimize $C(G)$
 ![](imgs/gan-eqn4.png)
@@ -94,7 +94,7 @@ output:
 model's distribution and the data generating process
 ![](imgs/gan-eqn6.png)
 * Thus, $C^{*} = -\text{log}(4)$ is the optimum value attained when
-\centerline{$p_g = g_{\text{data}}$}
+\centerline{$p_g = p_{\text{data}}$}
 
 
 ## Convergence of training algorithm
@@ -120,16 +120,14 @@ model's distribution and the data generating process
 ## Experimental
 * Log likelyhoods for MNIST and TFD
 ![](imgs/gan-tbl1.png)
-* a syntetic measure, based on Parzen window estimates of $P_{data}$
+* a synthetic measure, based on Parzen window estimates of $P_{data}$
 * need for robust measure for generative models in general
 
 # Conclusions
 
 ## Advantages
 
-This model provides many advantages on deep graphical models and their alternates:
-
-* inference becomes simple by avoiding Markov chains
+* This model provides many advantages on deep graphical models and their alternatives
 * Training becomes requires only backprop of gradients
 * Any differentiable function is theoretically permissible
 
