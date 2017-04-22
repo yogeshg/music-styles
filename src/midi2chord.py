@@ -1,4 +1,6 @@
 import sys
+import cPickle
+import argparse
 
 def load_csv(filename):
     import csv
@@ -7,7 +9,6 @@ def load_csv(filename):
         reader = csv.reader(csvfile)
         for row in reader:
             data.append(row)
-            print ', '.join(row)
     return data
 
 def ignore_track(data):
@@ -17,8 +18,14 @@ def ignore_track(data):
             ignore.append(data[i][0])
     return ignore
 
-def build_chords(data,ignore_tracks):
+def build_chords(data,ignore_tracks,noclip):
     sorted_data = sorted(data, key=lambda x: int(x[1]))
+    if noclip:
+        clip_min=-1
+        clip_max=1000
+    else:
+        clip_min=9
+        clip_max=96
     current_chord = []
     chords = []
     p_track = None
@@ -39,7 +46,7 @@ def build_chords(data,ignore_tracks):
         except:
             continue
         if c_track not in ignore_tracks:
-            if c_type=='Note_on_c' and int(c_vel)!=0:
+            if c_type=='Note_on_c' and int(c_vel)!=0 and c_note>=clip_min and c_note<=clip_max:
                 if c_tic==p_tic:
                     current_chord.append(c_note)
                 else:
@@ -64,20 +71,29 @@ def build_chords(data,ignore_tracks):
         p_vel = c_vel
     
     chords = filter(None, chords)
-    print chords
 
     return chords
 
 
 
 
-def main(filename):
-    data = load_csv("1.csv")
+def main(csv, save_file=None, clip=True):
+    data = load_csv(csv)
     ignore = ignore_track(data)
-    chords = build_chords(data,ignore)
+    chords = build_chords(data,ignore,clip)
+    if save_file:
+        with open(save_file,'wb') as file:
+                cPickle.dump(chords, file)
     return chords
 
 
 if __name__=="__main__":
+    noclip=False
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--csv', required=True, type=str, help='specify the location of the csv file output from midicsv')
+    parser.add_argument('--save', required=True, type=str, help='specify what file to save the output to')
+    parser.add_argument('--noclip', action='store_true', help='use this flag to not clip the range of notes in chords to 88 range of chord2vec')
     
-    main("1.csv")
+    args=parser.parse_args(sys.argv[1:])
+    
+    main(args.csv,args.save,noclip)
