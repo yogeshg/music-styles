@@ -5,7 +5,7 @@ What Gen?
 * aim of gen models
 * examples a few of which we have seen before
 -hmm text to speach
--generative autoencoders
+-generative/variational autoencoders in generating sentences from cont. space
 
 Why useful?
 
@@ -13,11 +13,18 @@ Game theory
 * explain mixed strategy equilibrium
 
 Adversarial networks
-* mixed strategy because otherwise adversary 
-will learn the non mixed data point
-* Yogesh will show why the equilibrium occours when generate data
-* paper introduces the general concept but limits its investigations to multilayer perceptrons
+* mixed strategy because otherwise adversary will learn the non mixed data point
+* Yogesh will show why the equilibrium occours when generate data learns true list
+* paper introduces the general concept of any G and D but limits its investigations to multilayer perceptrons
 
+better than others:
+* generate samples faster than fully visible belief networks (wavenet pixelrnn)
+* no MC approximations to gradient Boltzmann machines - don't work for high dim
+* vae optimize lower bound on log-likelyhood so generate blurry samples
+* no makov chain (bolzmann gsn) unknown number of itterations through chain
+worse:
+* no guarantees that it will find nash equilibrium
+* bad for descrete data
 
 Loss fn
 * in practice better because when G is poor D can reject all samples trivially
@@ -29,15 +36,3 @@ Algo
  - blue training data
  - red generated
  - red blue is the soft threshold of descriminator
-
-* definition of KL-divergence
-* correct last equation on theoretical result 1
-* label axes in saddle-gd
-* syntetic
-
-* skip advantages based on other models
-
-* show the video first
-* start video 1 frmo 18 seconds
-* richard to send 2d mnist interpolation
-* theoretical results is a heading right now
