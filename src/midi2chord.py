@@ -2,6 +2,7 @@ import sys
 import cPickle
 import argparse
 import logging
+import os
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
@@ -44,12 +45,13 @@ def build_chords(data, ignore_tracks, noclip):
             c_track = int(mes[0].strip())
             c_tic = int(mes[1].strip())
             c_type = mes[2].strip()
+            c_chan = int(mes[3].strip())
             c_note = int(mes[4].strip())
             c_vel = int(mes[5].strip())
         except:
             continue
         if c_track not in ignore_tracks:
-            if c_type=='Note_on_c' and int(c_vel)!=0 and c_note>=clip_min and c_note<=clip_max:
+            if c_type=='Note_on_c' and int(c_vel)!=0 and c_note>=clip_min and c_note<=clip_max and c_chan!=9:
                 if c_tic==p_tic:
                     current_chord.append(c_note)
                 else:
@@ -77,11 +79,25 @@ def build_chords(data, ignore_tracks, noclip):
 
     return chords
 
+def all_csv(directory):
+    csvs=[]
+    cwd=os.getcwd()
+    for root, dir_list, files in os.walk(directory):
+        for f in files:
+            if f.endswith(".csv"):
+                csvs.append(os.path.join(root, f))
+    return csvs
 
-def main(csv, save=None, noclip=True, train_cut=0.6, valid_cut=0.2):
+def main(directory, save=None, noclip=True, train_cut=0.6, valid_cut=0.2):
     logger.debug(str(locals()))
     songs = []
-    for csv in [csv]:
+    csvs = all_csv(directory)
+    if len(csvs)==0:
+        print "no csv files found in that directory"
+        sys.exit()
+    print 'loading these files:\n', csvs
+    for csv in csvs:
+        print "loading",csv
         data = load_csv(csv)
         ignore = ignore_track(data)
         chords = build_chords(data, ignore, noclip)
@@ -98,11 +114,13 @@ def main(csv, save=None, noclip=True, train_cut=0.6, valid_cut=0.2):
 
 
 if __name__=="__main__":
+    
     parser = argparse.ArgumentParser()
-    parser.add_argument('--csv', required=True, type=str, help='specify the location of the csv file output from midicsv')
+    parser.add_argument('--directory', required=True, type=str, help='specify the directory of the csv file outputs from midicsv')
     parser.add_argument('--save', required=True, type=str, help='specify what file to save the output to')
     parser.add_argument('--noclip', default=False, action='store_true', help='use this flag to not clip the range of notes in chords to 88 range of chord2vec')
     parser.add_argument('--train_cut', type=float, default=0.6, help='fraction of data to be used for training')
     parser.add_argument('--valid_cut', type=float, default=0.2, help='fraction of data to be used for validation')
     args = parser.parse_args(sys.argv[1:])
+    
     main(**args.__dict__)
