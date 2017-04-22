@@ -1,6 +1,9 @@
 import sys
 import cPickle
 import argparse
+import logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 def load_csv(filename):
     import csv
@@ -18,7 +21,7 @@ def ignore_track(data):
             ignore.append(data[i][0])
     return ignore
 
-def build_chords(data,ignore_tracks,noclip):
+def build_chords(data, ignore_tracks, noclip):
     sorted_data = sorted(data, key=lambda x: int(x[1]))
     if noclip:
         clip_min=-1
@@ -75,25 +78,31 @@ def build_chords(data,ignore_tracks,noclip):
     return chords
 
 
-
-
-def main(csv, save_file=None, clip=True):
-    data = load_csv(csv)
-    ignore = ignore_track(data)
-    chords = build_chords(data,ignore,clip)
-    if save_file:
-        with open(save_file,'wb') as file:
-                cPickle.dump(chords, file)
-    return chords
+def main(csv, save=None, noclip=True, train_cut=0.6, valid_cut=0.2):
+    logger.debug(str(locals()))
+    songs = []
+    for csv in [csv]:
+        data = load_csv(csv)
+        ignore = ignore_track(data)
+        chords = build_chords(data, ignore, noclip)
+        songs.append(chords)
+    songs ## has some length and chords
+    l = len(songs)
+    l1 = int(train_cut * l)
+    l2 = int(valid_cut * l)
+    data = {'train': songs[:l1], 'valid':songs[l1:l1+l2], 'test':songs[l1+l2:]}
+    if save:
+        with open(save,'wb') as file:
+                cPickle.dump(data, file)
+    return data
 
 
 if __name__=="__main__":
-    noclip=False
     parser = argparse.ArgumentParser()
     parser.add_argument('--csv', required=True, type=str, help='specify the location of the csv file output from midicsv')
     parser.add_argument('--save', required=True, type=str, help='specify what file to save the output to')
-    parser.add_argument('--noclip', action='store_true', help='use this flag to not clip the range of notes in chords to 88 range of chord2vec')
-    
-    args=parser.parse_args(sys.argv[1:])
-    
-    main(args.csv,args.save,noclip)
+    parser.add_argument('--noclip', default=False, action='store_true', help='use this flag to not clip the range of notes in chords to 88 range of chord2vec')
+    parser.add_argument('--train_cut', type=float, default=0.6, help='fraction of data to be used for training')
+    parser.add_argument('--valid_cut', type=float, default=0.2, help='fraction of data to be used for validation')
+    args = parser.parse_args(sys.argv[1:])
+    main(**args.__dict__)
