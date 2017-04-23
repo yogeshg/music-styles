@@ -11,3 +11,8 @@ convert midi to chords:
 
 This is a repository for a research project on music styles
 repo wiki is found here: https://github.com/yogeshg/music-styles/wiki
+
+
+
+MSD genre labels used: (stratified 80%train)
+http://www.ifs.tuwien.ac.at/mir/msd/partitions/msd-topMAGD-partition_stratifiedPercentageSplit_0.8-v1.0.cls
