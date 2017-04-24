@@ -102,7 +102,7 @@ def allcsvs(l_root, msd_id):
 
 def midi2csv(p,midifname):
     path = os.path.join(p,midifname)
-    csv_file_path = 'test.csv'
+    csv_file_path = '../data/tmp/test.csv'
     l_id = midifname
     bashCommand = "midicsv %s test.csv" % path
     print bashCommand
@@ -139,7 +139,7 @@ def loadLabels(stratSplit, genres):
                     pass
     return labels
 
-def classPkl(stratSplit='../data/msd-topMAGD-partition_percentageSplit_0.8-v1.0.cls', genres='../data/msd-topMAGD-genreAssignment.cls', l_root='../data/lmd_aligned', noclip=True, train_cut=0.8, save='tmp'):
+def classPkl(stratSplit='../data/msd-topMAGD-partition_percentageSplit_0.8-v1.0.cls', genres='../data/msd-topMAGD-genreAssignment.cls', l_root='../data/lmd_aligned', noclip=True, train_cut=0.8, save='../data/tmp'):
     trainSongs=[]
     testSongs=[]
     trainLabels=[]
