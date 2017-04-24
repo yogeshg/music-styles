@@ -3,6 +3,8 @@ import cPickle
 import argparse
 import logging
 import os
+import subprocess
+import json
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
@@ -79,14 +81,117 @@ def build_chords(data, ignore_tracks, noclip):
 
     return chords
 
+def msd_id_to_dirs(l_root,msd_id):
+    """Given an MSD ID, generate the path prefix.
+    E.g. TRABCD12345678 -> A/B/C/TRABCD12345678"""
+    p = os.path.join(l_root, msd_id[2], msd_id[3], msd_id[4], msd_id)
+    if os.path.exists(p):
+        for f in os.listdir(p):
+            if f.endswith(".mid"):
+                print 'BEFORE'
+                l_id, csv_file_path = midi2csv(p,f)
+                yield( (l_id, csv_file_path) )
+                print 'AFTER'
+                print "should print delets file"
+                deleteCsv(csv_file_path)
+    return
+
+def allcsvs(l_root, msd_id):
+    for l_id, csv in msd_id_to_dirs(l_root, msd_id):
+        yield (l_id, csv)
+
+def midi2csv(p,midifname):
+    path = os.path.join(p,midifname)
+    csv_file_path = 'test.csv'
+    l_id = midifname
+    bashCommand = "midicsv %s test.csv" % path
+    print bashCommand
+    process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+    output, error = process.communicate()
+    print 'creates file', midifname
+    return l_id, csv_file_path
+
+def deleteCsv(csvfname):
+    #deletes csvfname
+    bashCommand = "rm %s" % csvfname
+    print bashCommand
+    process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+    output, error = process.communicate()
+    print 'deletes file'
+    return
+
+def loadLabels(stratSplit, genres):
+
+    d = {}
+    labels = []
+    with open(stratSplit) as f:
+        for line in f:
+            if line[0]!="%":
+                (key, val) = line.split()
+                d[key] = val
+    with open(genres) as f:
+        for line in f:
+            if line[0]!="%":
+                (m_id, genre) = line.split("\t")
+                try:
+                    labels.append((m_id, genre, d[m_id]))
+                except:
+                    pass
+    return labels
+
+def classPkl(stratSplit='../data/msd-topMAGD-partition_percentageSplit_0.8-v1.0.cls', genres='../data/msd-topMAGD-genreAssignment.cls', l_root='../data/lmd_aligned', noclip=True, train_cut=0.8, save='tmp'):
+    trainSongs=[]
+    testSongs=[]
+    trainLabels=[]
+    testLabels=[]
+    trainMeta=[]
+    testMeta=[]
+    i=1
+    for (m_id, genre, isTest) in loadLabels(stratSplit, genres):
+        for l_id, csvname in allcsvs(l_root, m_id):
+            # at this point csvname will exist
+            print csvname
+            data = load_csv(csvname)
+            ignore = ignore_track(data)
+            chords = build_chords(data, ignore, noclip)
+            if isTest == 'TRAIN':
+                trainSongs.append(chords)
+                trainLabels.append(genre)
+                trainMeta.append([m_id, l_id, genre, isTest])
+            else:
+                testSongs.append(chords)
+                testLabels.append(genre)
+                testMeta.append([m_id, l_id, genre, isTest])
+            i+=1
+        if i>100:
+            break
+    l = len(trainSongs)
+    l1 = int(train_cut * l)
+    data = {'train': trainSongs[:l1], 'valid':trainSongs[l1:], 'test':testSongs}
+    labels = {'train': trainLabels[:l1], 'valid': trainLabels[l1:], 'test':testLabels}
+    meta = {'train': trainMeta[:l1], 'valid': trainMeta[:l1], 'test':testMeta}
+        
+    if save:
+        with open(os.path.join(save,'X.pickle'),'wb') as f:
+            cPickle.dump(data, f)
+        with open(os.path.join(save,'y.pickle'),'wb') as f:
+            cPickle.dump(labels, f)
+        with open(os.path.join(save,'metadata.json'),'w') as f:
+            json.dump(meta, f)
+
+    return data, labels, meta
+
+        
+
+
 def all_csv(directory):
     csvs=[]
-    cwd=os.getcwd()
     for root, dir_list, files in os.walk(directory):
         for f in files:
             if f.endswith(".csv"):
                 csvs.append(os.path.join(root, f))
     return csvs
+
 
 def main(directory, save=None, noclip=True, train_cut=0.6, valid_cut=0.2):
     logger.debug(str(locals()))
@@ -114,7 +219,8 @@ def main(directory, save=None, noclip=True, train_cut=0.6, valid_cut=0.2):
 
 
 if __name__=="__main__":
-    
+    classPkl()
+    '''    
     parser = argparse.ArgumentParser()
     parser.add_argument('--directory', required=True, type=str, help='specify the directory of the csv file outputs from midicsv')
     parser.add_argument('--save', required=True, type=str, help='specify what file to save the output to')
@@ -124,3 +230,4 @@ if __name__=="__main__":
     args = parser.parse_args(sys.argv[1:])
     
     main(**args.__dict__)
+    '''
