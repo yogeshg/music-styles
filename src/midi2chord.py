@@ -55,7 +55,7 @@ def build_chords(data, ignore_tracks, noclip):
         if c_track not in ignore_tracks:
             if c_type=='Note_on_c' and int(c_vel)!=0 and c_note>=clip_min and c_note<=clip_max and c_chan!=9:
                 if c_tic==p_tic:
-                    current_chord.append(c_note)
+                    current_chord.append(c_note-max(0,clip_min))
                 else:
                     chords.append(current_chord[:])
                     current_chord.append(c_note)
