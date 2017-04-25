@@ -6,6 +6,9 @@ logger = logging.getLogger(__name__)
 import cPickle
 import numpy as np
 import math
+import json
+import sys
+
 import keras
 from keras.layers import Input, Embedding, Conv1D, GlobalMaxPool1D, Dense, GlobalAvgPool1D, Dropout
 from keras.layers import concatenate
@@ -16,7 +19,8 @@ from keras.engine.topology import Layer
 from keras.utils import to_categorical
 from keras.optimizers import Adam
 
-from .utils import plot_model, plot_metric, save_history
+from util import plot_model, plot_metric, save_code, fill_dict
+from util.archiver import get_archiver
 import config as c
 
 # MAX_CHORDS = 150
@@ -101,13 +105,25 @@ def multihot3D(x, r, maxlen=None, dtype=np.float32):
     return x_mh
     # return square3D(x_mh, maxlen=maxlen, dtype=dtype)
 
-def load_data(x_datapath='data/X.pickle',
-        y_datapath='data/y.pickle'):
+def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
+    '''
+    x_datapath : path for X.pickle
+    y_datapath : path for y.pickle
+    cut : fraction in [0.0, 1.0] to load less data if required.
+    '''
     global data, train, test, valid, MAX_CHORDS
     global labels, y_train, y_test, y_valid, MAX_LABELS, index2label, labels2index
     logger.debug('loading data from: '+x_datapath)
     data = cPickle.load(open(x_datapath))
     train, test, valid = data['train'], data['test'], data['valid']
+    if(cut<1.0):
+        cutf = lambda x, c: x[:int(len(x)*cut)]
+        train = cutf(train, cut)
+        valid = cutf(valid, cut)
+        test = cutf(test, cut)
+        data2 = {'train':train, 'valid':valid, 'test':test}
+        cPickle.dump(data2, open(x_datapath+str(cut)+'.pickle', 'w'))
+
     train = multihot3D(train, NUM_NOTES)
     test  = multihot3D(test, NUM_NOTES)
     valid = multihot3D(valid, NUM_NOTES)
@@ -120,6 +136,14 @@ def load_data(x_datapath='data/X.pickle',
 
     logger.debug('loading labels from: '+y_datapath)
     labels = cPickle.load(open(y_datapath))
+    if(cut<1.0):
+        cutf = lambda x, c: x[:int(len(x)*cut)]
+        train = cutf(labels['train'], cut)
+        valid = cutf(labels['valid'], cut)
+        test = cutf( labels['test'], cut)
+        labels2 = {'train':train, 'valid':valid, 'test':test}
+        cPickle.dump(labels2, open(y_datapath+str(cut)+'.pickle', 'w'))
+
     s = set()
     for k,v in labels.iteritems():
         for y in v:
@@ -180,22 +204,49 @@ def save_history(history, dirpath):
 
     return
 
-load_embeddings()
-load_data()
+def run_experiment(**kwargs):    
+    model, params = get_model()
+    hyperparams = fill_dict(params, kwargs)
+    
+    transforms = [lambda x:sequence.pad_sequences(x, MAX_CHORDS), lambda y:y]
+    dm_train = DataManager(train, y_train, batch_size=c.batch_size, maxepochs=c.epochs, transforms=transforms)
+    dm_valid = DataManager(valid, y_valid, batch_size=c.batch_size, maxepochs=1, transforms=transforms)
+    
+    currdir = 'dev' if getattr(kwargs, 'devmode', False) else None
+    with get_archiver(datadir='data/models', currdir=currdir) as a1, get_archiver(datadir='data/results', currdir=currdir) as a:
 
+        with open(a.getFilePath('hyperparameters.json'), 'w') as f:
+            json.dump(hyperparams, f, indent=2)
 
-m,p = get_model()
+        with open(a.getFilePath('model.json'), 'w') as f:
+            f.write(model.to_json(indent=2))
 
-transforms = [lambda x:sequence.pad_sequences(x, MAX_CHORDS), lambda y:y]
-dm_train = DataManager(train, y_train, batch_size=c.batch_size, maxepochs=c.epochs, transforms=transforms)
-dm_valid = DataManager(valid, y_valid, batch_size=c.batch_size, maxepochs=1, transforms=transforms)
+        stdout = sys.stdout
+        with open(a.getFilePath('summary.txt'), 'w') as sys.stdout:
+            model.summary()
+        sys.stdout = stdout
 
-earlystopping = EarlyStopping(monitor=c.monitor, patience=c.patience, verbose=0, mode=c.monitor_objective)
-modelcheckpoint = ModelCheckpoint('./data/classifier', monitor=c.monitor, save_best_only=True, verbose=0, mode=c.monitor_objective)
-logger.info('starting training')
-h = m.fit_generator(generator=dm_train.batch_generator(), steps_per_epoch=dm_train.num_batches,
-        epochs=c.epochs, validation_data=dm_valid.batch_generator(), validation_steps=dm_valid.num_batches,
-        callbacks=[earlystopping, modelcheckpoint] )
+        plot_model(model, to_file=a.getFilePath('model.png'), show_shapes=True, show_layer_names=True)
 
-save_history(h, './data/')
+        earlystopping = EarlyStopping(monitor=c.monitor, patience=c.patience, verbose=0, mode=c.monitor_objective)
+        modelpath = a1.getFilePath('weights.h5')
+        modelcheckpoint = ModelCheckpoint(modelpath, monitor=c.monitor, save_best_only=True, verbose=0, mode=c.monitor_objective)
+        logger.info('starting training')
+        h = m.fit_generator(generator=dm_train.batch_generator(), steps_per_epoch=dm_train.num_batches,
+                epochs=c.epochs, validation_data=dm_valid.batch_generator(), validation_steps=dm_valid.num_batches,
+                callbacks=[earlystopping, modelcheckpoint] )
+    
+        save_history(h, a.getDirPath())
 
+def main():
+    devmode = True
+    commit_hash = save_code()
+    embeddings_path = '/home/yg2482/code/chord2vec/data/chord2vec_199.npz'
+    x_datapath='data/X.001.pickle'
+    y_datapath='data/y.001.pickle'
+    load_embeddings(embeddings_path=embeddings_path)
+    load_data(x_datapath=x_datapath, y_datapath=y_datapath)
+    run_experiment(**locals())
+
+if __name__ == '__main__':
+    main()
