@@ -108,11 +108,10 @@ def load_data(x_datapath='/home/yg2482/code/chord2vec/data/X.pickle',
     test  = multihot3D(test, NUM_NOTES)
     valid = multihot3D(valid, NUM_NOTES)
     maxlen2D = lambda x : max([len(s) for s in x])
-    maxseqlen = max( map(maxlen2D, [train, test, valid]))
-    train = sequence.pad_sequences(train, maxseqlen)
-    test = sequence.pad_sequences(test, maxseqlen)
-    valid = sequence.pad_sequences(valid, maxseqlen)
-    MAX_CHORDS = maxseqlen
+    MAX_CHORDS = max( map(maxlen2D, [train, test, valid]))
+    train = sequence.pad_sequences(train, MAX_CHORDS)
+    test = sequence.pad_sequences(test, MAX_CHORDS)
+    valid = sequence.pad_sequences(valid, MAX_CHORDS)
     # TODO: NORMALIZE!!!
 
     logger.debug('loading labels from: '+y_datapath)

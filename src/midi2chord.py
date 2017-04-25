@@ -104,7 +104,7 @@ def midi2csv(p,midifname):
     path = os.path.join(p,midifname)
     csv_file_path = '../data/tmp/test.csv'
     l_id = midifname
-    bashCommand = "midicsv %s test.csv" % path
+    bashCommand = "./midicsv %s ../data/tmp/test.csv" % path
     print bashCommand
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
     output, error = process.communicate()
@@ -163,8 +163,6 @@ def classPkl(stratSplit='../data/msd-topMAGD-partition_percentageSplit_0.8-v1.0.
                 testLabels.append(genre)
                 testMeta.append([m_id, l_id, genre, isTest])
             i+=1
-        if i>100:
-            break
     l = len(trainSongs)
     l1 = int(train_cut * l)
     data = {'train': trainSongs[:l1], 'valid':trainSongs[l1:], 'test':testSongs}
