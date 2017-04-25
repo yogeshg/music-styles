@@ -135,7 +135,7 @@ def loadLabels(strat, genres):
     return labels
 
 def classPkl(data_root, save, noclip=True, valid_cut = 0.2, number_files=100):
-    checkDataExist(data_root, save, classification=True)
+    checkDataExist(data_root, save)
     stratSplit=os.path.join(data_root,'msd-topMAGD-partition_percentageSplit_0.8-v1.0.cls')
     genres=os.path.join(data_root,'msd-topMAGD-genreAssignment.cls')
     l_root=os.path.join(data_root,'lmd_aligned')
@@ -167,11 +167,11 @@ def classPkl(data_root, save, noclip=True, valid_cut = 0.2, number_files=100):
             break
 
     
-    l = len(trainSongs)
+    l = len(trainMeta)
     l1 = int((1-valid_cut) * l)
     data = {'train': trainSongs[:l1], 'valid':trainSongs[l1:], 'test':testSongs}
     labels = {'train': trainLabels[:l1], 'valid': trainLabels[l1:], 'test':testLabels}
-    meta = {'train': trainMeta[:l1], 'valid': trainMeta[:l1], 'test':testMeta}
+    meta = {'train': trainMeta[:l1], 'valid': trainMeta[l1:], 'test':testMeta}
         
     if save:
         print 'saving pkl and json files to', save
@@ -184,7 +184,7 @@ def classPkl(data_root, save, noclip=True, valid_cut = 0.2, number_files=100):
 
     return data, labels, meta
 
-def checkDataExist(data_root, save, classification):
+def checkDataExist(data_root, save):
     if not os.path.exists(data_root):
         print "making data_root"
         os.makedirs(data_root)
@@ -202,27 +202,28 @@ def checkDataExist(data_root, save, classification):
             urllib.urlretrieve('http://hog.ee.columbia.edu/craffel/lmd/lmd_aligned.tar.gz', lzip)
         print 'please go to the directory %s and unzip lmd_aligned.tar.gz before running the program again' % data_root
         sys.exit()
-    if classification:
-        part_path = os.path.join(data_root,'msd-topMAGD-partition_percentageSplit_0.8-v1.0.cls')
-        genre_path = os.path.join(data_root,'msd-topMAGD-genreAssignment.cls')
-        if not os.path.exists(genre_path):
-            print 'genre labels file doesnt exist downloading it:'
-            urllib.urlretrieve('http://ifs.tuwien.ac.at/mir/msd/partitions/msd-topMAGD-genreAssignment.cls', genre_path)
-        if not os.path.exists(part_path):
-            print 'stratified split file doesnt exist downloading it:'
-            urllib.urlretrieve('http://ifs.tuwien.ac.at/mir/msd/partitions/msd-topMAGD-partition_percentageSplit_0.8-v1.0.cls', part_path)
+    part_path = os.path.join(data_root,'msd-topMAGD-partition_percentageSplit_0.8-v1.0.cls')
+    genre_path = os.path.join(data_root,'msd-topMAGD-genreAssignment.cls')
+    if not os.path.exists(genre_path):
+        print 'genre labels file doesnt exist downloading it:'
+        urllib.urlretrieve('http://ifs.tuwien.ac.at/mir/msd/partitions/msd-topMAGD-genreAssignment.cls', genre_path)
+    if not os.path.exists(part_path):
+        print 'stratified split file doesnt exist downloading it:'
+        urllib.urlretrieve('http://ifs.tuwien.ac.at/mir/msd/partitions/msd-topMAGD-partition_percentageSplit_0.8-v1.0.cls', part_path)
     print 'done ensuring data set up properly'
 
 
 
 def embeddingPkl(data_root, save=None, noclip=True, train_cut=0.8, valid_cut=0.2, number_files=100):
     logger.debug(str(locals()))
-    checkDataExist(data_root, save, classification=False)
+    checkDataExist(data_root, save)
+    stratSplit=os.path.join(data_root,'msd-topMAGD-partition_percentageSplit_0.8-v1.0.cls')
+    genres=os.path.join(data_root,'msd-topMAGD-genreAssignment.cls')
     l_root=os.path.join(data_root,'lmd_aligned')
     songs=[]
     metaData=[]
     i=1
-    for m_id in loadChords(stratSplit, genres):
+    for (m_id, _, _) in loadLabels(stratSplit, genres):
         for l_id, csvname in allcsvs(l_root, m_id, save):
             # at this point csvname will exist
             data = load_csv(csvname)
@@ -253,7 +254,6 @@ def embeddingPkl(data_root, save=None, noclip=True, train_cut=0.8, valid_cut=0.2
 
 def main(data_root, save=None, noclip=True, train_cut=0.6, valid_cut = 0.2, number_files=100, embedding=False):
     if embedding:
-        sys.exit()
         embeddingPkl(data_root, save, noclip, train_cut, valid_cut, number_files)
     else:
         classPkl(data_root, save, noclip, valid_cut, number_files)
