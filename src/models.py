@@ -1,5 +1,5 @@
 import logging
-logging.basicConfig(level = logging.DEBUG, format=
+logging.basicConfig(level = logging.INFO , format=
         '%(asctime)s:%(levelname)s:%(name)s:%(threadName)s:line %(lineno)d: %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -15,6 +15,9 @@ from keras import regularizers
 from keras.engine.topology import Layer
 from keras.utils import to_categorical
 from keras.optimizers import Adam
+
+from .utils import plot_model, plot_metric, save_history
+import config as c
 
 # MAX_CHORDS = 150
 # MAX_LABELS = 5
@@ -98,8 +101,8 @@ def multihot3D(x, r, maxlen=None, dtype=np.float32):
     return x_mh
     # return square3D(x_mh, maxlen=maxlen, dtype=dtype)
 
-def load_data(x_datapath='/home/yg2482/code/chord2vec/data/X.pickle',
-        y_datapath='/home/yg2482/code/chord2vec/data/y.pickle'):
+def load_data(x_datapath='data/X.pickle',
+        y_datapath='data/y.pickle'):
     global data, train, test, valid, MAX_CHORDS
     global labels, y_train, y_test, y_valid, MAX_LABELS, index2label, labels2index
     logger.debug('loading data from: '+x_datapath)
@@ -110,9 +113,9 @@ def load_data(x_datapath='/home/yg2482/code/chord2vec/data/X.pickle',
     valid = multihot3D(valid, NUM_NOTES)
     maxlen2D = lambda x : max([len(s) for s in x])
     MAX_CHORDS = max( map(maxlen2D, [train, test, valid]))
-    train = sequence.pad_sequences(train, MAX_CHORDS)
-    test = sequence.pad_sequences(test, MAX_CHORDS)
-    valid = sequence.pad_sequences(valid, MAX_CHORDS)
+    # train = sequence.pad_sequences(train, MAX_CHORDS)
+    # test = sequence.pad_sequences(test, MAX_CHORDS)
+    # valid = sequence.pad_sequences(valid, MAX_CHORDS)
     # TODO: NORMALIZE!!!
 
     logger.debug('loading labels from: '+y_datapath)
@@ -164,6 +167,35 @@ class DataManager():
                 #     yield (inpt, trgt)
         return
 
-# load_data()
-# load_embeddings()
+def save_history(history, dirpath):
+    with open(dirpath+'/training.json', 'w') as f:
+        json.dump(history.params, f, indent=2)
+
+    df = pd.DataFrame.from_dict(history.history)
+    df.to_csv(dirpath+'/history.csv')
+    i = df.loc[:, c.monitor].argmax()
+
+    for m in c.metrics + ['loss']:
+        plot_metric(df, m, i, dirpath)
+
+    return
+
+load_embeddings()
+load_data()
+
+
+m,p = get_model()
+
+transforms = [lambda x:sequence.pad_sequences(x, MAX_CHORDS), lambda y:y]
+dm_train = DataManager(train, y_train, batch_size=c.batch_size, maxepochs=c.epochs, transforms=transforms)
+dm_valid = DataManager(valid, y_valid, batch_size=c.batch_size, maxepochs=1, transforms=transforms)
+
+earlystopping = EarlyStopping(monitor=c.monitor, patience=c.patience, verbose=0, mode=c.monitor_objective)
+modelcheckpoint = ModelCheckpoint('./data/classifier', monitor=c.monitor, save_best_only=True, verbose=0, mode=c.monitor_objective)
+logger.info('starting training')
+h = m.fit_generator(generator=dm_train.batch_generator(), steps_per_epoch=dm_train.num_batches,
+        epochs=c.epochs, validation_data=dm_valid.batch_generator(), validation_steps=dm_valid.num_batches,
+        callbacks=[earlystopping, modelcheckpoint] )
+
+save_history(h, './data/')
 
