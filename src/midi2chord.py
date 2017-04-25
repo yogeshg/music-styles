@@ -165,7 +165,6 @@ def classPkl(data_root, save, noclip=True, valid_cut = 0.2, number_files=100):
             i+=1
         if i>number_files:
             break
-
     
     l = len(trainMeta)
     l1 = int((1-valid_cut) * l)

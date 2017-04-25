@@ -137,6 +137,11 @@ Most important challenges include:
 
 * Synchronizing the discriminator with generator
     - If $G$ trains faster than $D$, it may collapse too many $z$ to the same value of $x$
+    - \url{https://youtu.be/mObnwR-u8pc?t=18s}
+    - Can be dealt with by feeding the Discriminator with a batch of generated data
+    - \url{https://youtu.be/0r3g7-4bMYU?t=6s}
+
+----
 
 * there is no explicit representation of $p_g(x)$
     - approximated with Parzen density estimation
@@ -152,11 +157,6 @@ Most important challenges include:
 \includegraphics[width=0.2\textwidth]{imgs/parzen-graph-d.png}
 }
 
-----
-
-* Generator collapses to the mean
-    - \url{https://www.youtube.com/watch?v=mObnwR-u8pc}
-    - \url{https://www.youtube.com/watch?v=0r3g7-4bMYU}
 
 ## Interesting experiments
 * Interpolation between hand written number 1 to 5
@@ -171,3 +171,7 @@ Most important challenges include:
 
 * Faces turn\footnote{Radford, A., Metz, L., Chintala, S.: Unsupervised representation learning with deep convolutional generative adversarial networks. In: ICLR (2016)}
 ![](imgs/dcgan-fig-8.jpeg)
+
+----
+
+### Thank You

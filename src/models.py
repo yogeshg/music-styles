@@ -5,6 +5,7 @@ logger = logging.getLogger(__name__)
 
 import cPickle
 import numpy as np
+import math
 import keras
 from keras.layers import Input, Embedding, Conv1D, GlobalMaxPool1D, Dense, GlobalAvgPool1D, Dropout
 from keras.layers import concatenate
@@ -108,11 +109,10 @@ def load_data(x_datapath='/home/yg2482/code/chord2vec/data/X.pickle',
     test  = multihot3D(test, NUM_NOTES)
     valid = multihot3D(valid, NUM_NOTES)
     maxlen2D = lambda x : max([len(s) for s in x])
-    maxseqlen = max( map(maxlen2D, [train, test, valid]))
-    train = sequence.pad_sequences(train, maxseqlen)
-    test = sequence.pad_sequences(test, maxseqlen)
-    valid = sequence.pad_sequences(valid, maxseqlen)
-    MAX_CHORDS = maxseqlen
+    MAX_CHORDS = max( map(maxlen2D, [train, test, valid]))
+    train = sequence.pad_sequences(train, MAX_CHORDS)
+    test = sequence.pad_sequences(test, MAX_CHORDS)
+    valid = sequence.pad_sequences(valid, MAX_CHORDS)
     # TODO: NORMALIZE!!!
 
     logger.debug('loading labels from: '+y_datapath)
@@ -134,16 +134,36 @@ def load_data(x_datapath='/home/yg2482/code/chord2vec/data/X.pickle',
     y_valid = to_categorical(map(labels2index, labels['valid']), MAX_LABELS)
 
 
+class DataManager():
+    def __init__(self, inputs, targets, batch_size=128, maxepochs=10, transforms=lambda x:x):
+        self.datasize = len(inputs)
+        assert self.datasize == len(targets), 'size of targets should be the same as inputs'
+        self.inputs = inputs
+        self.targets = targets
+        self.batch_size = batch_size
+        self.maxepochs = maxepochs
+        self.num_batches = int(math.ceil(float(self.datasize)/batch_size))
+        if(callable(transforms)):
+            transforms = [transforms, transforms]
+        assert type(transforms)==list, 'transforms should be a *callable* or *list* of two callables'
+        assert len(transforms)==2, 'transforms should be a callable or list of *two* callables'
+        assert callable(transforms[0]) & callable(transforms[0]), 'transforms should be a callable or list of two *callables*'
+        self.inputs_transform = transforms[0]
+        self.targets_transform = transforms[1]
 
-# def get_batch(dataset, i, batch_size):
-#     logger.debug('cutting dataset: ' + str((i*batch_size, (i+1)*batch_size)))
-#     return dataset[ i*batch_size : (i+1)*batch_size ]
+    def batch_generator(self):
+        for epoch in range(self.maxepochs):
+            for i in range(self.num_batches):
+                logger.debug('loading batch {} of {}, epoch {}'.format(i, self.num_batches, epoch))
+                start = i*self.batch_size
+                end = (i+1)*self.batch_size
+                inputs_batch =  self.inputs_transform(self.inputs[start:end])
+                targets_batch =  self.targets_transform(self.targets[start:end])
+                yield (inputs_batch, targets_batch)
+                # for (inpt, trgt) in zip(inputs_batch, targets_batch):
+                #     yield (inpt, trgt)
+        return
 
-
-load_data()
-load_embeddings()
-
-
-
-
+# load_data()
+# load_embeddings()
 
