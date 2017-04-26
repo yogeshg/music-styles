@@ -1,6 +1,12 @@
 import pandas as pd
 import keras.utils
 import json
+import logging
+logger = logging.getLogger(__name__)
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
 
 def plot_metric(df, metric_name, i, dirpath):
     assert type(df) == pd.DataFrame, type(df)

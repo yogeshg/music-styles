@@ -8,6 +8,7 @@ import numpy as np
 import math
 import json
 import sys
+import pandas as pd
 
 import keras
 from keras.layers import Input, Embedding, Conv1D, GlobalMaxPool1D, Dense, GlobalAvgPool1D, Dropout
@@ -18,6 +19,7 @@ from keras import regularizers
 from keras.engine.topology import Layer
 from keras.utils import to_categorical
 from keras.optimizers import Adam
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from util import plot_model, plot_metric, save_code, fill_dict
 from util.archiver import get_archiver
@@ -177,6 +179,7 @@ class DataManager():
         assert callable(transforms[0]) & callable(transforms[0]), 'transforms should be a callable or list of two *callables*'
         self.inputs_transform = transforms[0]
         self.targets_transform = transforms[1]
+        logger.info('created a DataManager for batch_size: {}, maxepochs: {}'.format(batch_size, maxepochs))
 
     def batch_generator(self):
         for epoch in range(self.maxepochs):
@@ -187,9 +190,6 @@ class DataManager():
                 inputs_batch =  self.inputs_transform(self.inputs[start:end])
                 targets_batch =  self.targets_transform(self.targets[start:end])
                 yield (inputs_batch, targets_batch)
-                # for (inpt, trgt) in zip(inputs_batch, targets_batch):
-                #     yield (inpt, trgt)
-        return
 
 def save_history(history, dirpath):
     with open(dirpath+'/training.json', 'w') as f:
@@ -209,11 +209,10 @@ def run_experiment(**kwargs):
     hyperparams = fill_dict(params, kwargs)
     
     transforms = [lambda x:sequence.pad_sequences(x, MAX_CHORDS), lambda y:y]
-    dm_train = DataManager(train, y_train, batch_size=c.batch_size, maxepochs=c.epochs, transforms=transforms)
-    dm_valid = DataManager(valid, y_valid, batch_size=c.batch_size, maxepochs=1, transforms=transforms)
+    dm_train = DataManager(train, y_train, batch_size=c.batch_size, maxepochs=c.epochs+1, transforms=transforms)
+    dm_valid = DataManager(valid, y_valid, batch_size=c.batch_size, maxepochs=10, transforms=transforms)
     
-    currdir = 'dev' if getattr(kwargs, 'devmode', False) else None
-    with get_archiver(datadir='data/models', currdir=currdir) as a1, get_archiver(datadir='data/results', currdir=currdir) as a:
+    with get_archiver(datadir='data/models') as a1, get_archiver(datadir='data/results') as a:
 
         with open(a.getFilePath('hyperparameters.json'), 'w') as f:
             json.dump(hyperparams, f, indent=2)
@@ -232,14 +231,13 @@ def run_experiment(**kwargs):
         modelpath = a1.getFilePath('weights.h5')
         modelcheckpoint = ModelCheckpoint(modelpath, monitor=c.monitor, save_best_only=True, verbose=0, mode=c.monitor_objective)
         logger.info('starting training')
-        h = m.fit_generator(generator=dm_train.batch_generator(), steps_per_epoch=dm_train.num_batches,
-                epochs=c.epochs, validation_data=dm_valid.batch_generator(), validation_steps=dm_valid.num_batches,
-                callbacks=[earlystopping, modelcheckpoint] )
+        h = model.fit_generator(generator=dm_train.batch_generator(), steps_per_epoch=dm_train.num_batches, epochs=c.epochs,
+                        validation_data=dm_valid.batch_generator(), validation_steps=dm_valid.num_batches,
+                        callbacks=[earlystopping, modelcheckpoint] )
     
         save_history(h, a.getDirPath())
 
 def main():
-    devmode = True
     commit_hash = save_code()
     embeddings_path = '/home/yg2482/code/chord2vec/data/chord2vec_199.npz'
     x_datapath='data/X.001.pickle'
