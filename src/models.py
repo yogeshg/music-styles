@@ -179,7 +179,7 @@ class DataManager():
         assert callable(transforms[0]) & callable(transforms[0]), 'transforms should be a callable or list of two *callables*'
         self.inputs_transform = transforms[0]
         self.targets_transform = transforms[1]
-        logger.info('created a DataManager for batch_size: {}, maxepochs: {}'.format(batch_size, maxepochs))
+        logger.info('created a DataManager for batch_size: {}, maxepochs: {}, num_batches: {}'.format(batch_size, maxepochs, self.num_batches))
 
     def batch_generator(self):
         for epoch in range(self.maxepochs):
@@ -210,7 +210,7 @@ def run_experiment(**kwargs):
     
     transforms = [lambda x:sequence.pad_sequences(x, MAX_CHORDS), lambda y:y]
     dm_train = DataManager(train, y_train, batch_size=c.batch_size, maxepochs=c.epochs+1, transforms=transforms)
-    dm_valid = DataManager(valid, y_valid, batch_size=c.batch_size, maxepochs=10, transforms=transforms)
+    dm_valid = DataManager(valid, y_valid, batch_size=c.batch_size, maxepochs=100*c.epochs+1, transforms=transforms)
     
     with get_archiver(datadir='data/models') as a1, get_archiver(datadir='data/results') as a:
 
@@ -231,6 +231,7 @@ def run_experiment(**kwargs):
         modelpath = a1.getFilePath('weights.h5')
         modelcheckpoint = ModelCheckpoint(modelpath, monitor=c.monitor, save_best_only=True, verbose=0, mode=c.monitor_objective)
         logger.info('starting training')
+        logger.info(str((dm_train.num_batches, dm_valid.num_batches)))
         h = model.fit_generator(generator=dm_train.batch_generator(), steps_per_epoch=dm_train.num_batches, epochs=c.epochs,
                         validation_data=dm_valid.batch_generator(), validation_steps=dm_valid.num_batches,
                         callbacks=[earlystopping, modelcheckpoint] )
