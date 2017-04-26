@@ -19,7 +19,7 @@ from keras import regularizers
 from keras.engine.topology import Layer
 from keras.utils import to_categorical
 from keras.optimizers import Adam
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger
 
 from util import plot_model, plot_metric, save_code, fill_dict
 from util.archiver import get_archiver
@@ -49,12 +49,15 @@ def get_conv_stack(input_layer, filters, kernel_sizes, activation, kernel_l2_reg
     else:
         return Dropout(dropout_rate, noise_shape=None, seed=None)(concatenate(layers))
 
-def get_model():
+def get_model(embeddings=True):
     params = {k:v for k,v in locals().iteritems() if k!='weights'}
     # x = Input(shape=(NUM_NOTES,), dtype='float32')
     # TODO: NORMALIZE!!!
     x = Input(shape=(MAX_CHORDS,NUM_NOTES), dtype='float32')
-    y1 = Dense(NUM_DIM, activation='linear', use_bias=False, weights=[M1], trainable=False)(x)
+    if embeddings:
+        y1 = Dense(NUM_DIM, activation='linear', use_bias=False, weights=[M1], trainable=False)(x)
+    else:
+        y1 = x
     y2 = get_conv_stack(y1, 5, range(1,4), 'relu', 0.00001, 0.5)
     y3 = GlobalMaxPool1D()(y2)
     y = Dense(MAX_LABELS, activation='sigmoid')(y3)
@@ -205,7 +208,7 @@ def save_history(history, dirpath):
     return
 
 def run_experiment(**kwargs):    
-    model, params = get_model()
+    model, params = get_model( kwargs['embeddings'] )
     hyperparams = fill_dict(params, kwargs)
     
     transforms = [lambda x:sequence.pad_sequences(x, MAX_CHORDS), lambda y:y]
@@ -229,12 +232,13 @@ def run_experiment(**kwargs):
 
         earlystopping = EarlyStopping(monitor=c.monitor, patience=c.patience, verbose=0, mode=c.monitor_objective)
         modelpath = a1.getFilePath('weights.h5')
+        csvlogger = CSVLogger(a.getFilePath('logger.csv'))
         modelcheckpoint = ModelCheckpoint(modelpath, monitor=c.monitor, save_best_only=True, verbose=0, mode=c.monitor_objective)
         logger.info('starting training')
         logger.info(str((dm_train.num_batches, dm_valid.num_batches)))
         h = model.fit_generator(generator=dm_train.batch_generator(), steps_per_epoch=dm_train.num_batches, epochs=c.epochs,
                         validation_data=dm_valid.batch_generator(), validation_steps=dm_valid.num_batches,
-                        callbacks=[earlystopping, modelcheckpoint] )
+                        callbacks=[earlystopping, modelcheckpoint, csvlogger] )
     
         save_history(h, a.getDirPath())
 
