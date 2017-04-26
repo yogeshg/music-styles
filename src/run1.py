@@ -9,3 +9,5 @@ def main():
     load_data(x_datapath=x_datapath, y_datapath=y_datapath)
     run_experiment(**locals())
 
+main()
+
