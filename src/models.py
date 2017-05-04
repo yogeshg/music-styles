@@ -54,10 +54,8 @@ def get_conv_stack(input_layer, filters, kernel_sizes, activation, kernel_l2_reg
     else:
         return Dropout(dropout_rate, noise_shape=None, seed=None)(concatenate(layers))
 
-def get_model(embeddings=True):
+def get_model(embeddings=True, dilated_convs=False):
     params = {k:v for k,v in locals().iteritems() if k!='weights'}
-    # x = Input(shape=(NUM_NOTES,), dtype='float32')
-    # TODO: NORMALIZE!!!
     x = Input(shape=(MAX_CHORDS,NUM_NOTES), dtype='float32')
     if embeddings:
         y1 = Dense(NUM_DIM, activation='linear', use_bias=False, weights=[M1], trainable=False)(x)
@@ -67,8 +65,7 @@ def get_model(embeddings=True):
     y3 = GlobalMaxPool1D()(y2)
     y = Dense(MAX_LABELS, activation='sigmoid')(y3)
     model = Model(x, y)
-    adam = Adam(lr = 0.0001)
-    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=c.metrics)
+    model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=c.metrics)
     return (model, params)
 
 def load_embeddings(embeddings_path='/home/yg2482/code/chord2vec/data/chord2vec_199.npz'):
