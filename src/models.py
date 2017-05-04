@@ -25,10 +25,15 @@ from util import plot_model, plot_metric, save_code, fill_dict
 from util.archiver import get_archiver
 import config as c
 
-# MAX_CHORDS = 150
-# MAX_LABELS = 5
+MAX_CHORDS = None
+MAX_LABELS = None
 NUM_NOTES = 88
 NUM_DIM = 1024
+
+M1 = M2 = W = b2 = None
+data= train= test= valid= MAX_CHORDS = None
+labels= y_train= y_test= y_valid= MAX_LABELS= index2label= labels2index = None
+
 
 class LogSumExpPooling(Layer):
 
@@ -63,7 +68,7 @@ def get_model(embeddings=True):
     y = Dense(MAX_LABELS, activation='sigmoid')(y3)
     model = Model(x, y)
     adam = Adam(lr = 0.0001)
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc'])
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
     return (model, params)
 
 def load_embeddings(embeddings_path='/home/yg2482/code/chord2vec/data/chord2vec_199.npz'):
@@ -110,7 +115,7 @@ def multihot3D(x, r, maxlen=None, dtype=np.float32):
     return x_mh
     # return square3D(x_mh, maxlen=maxlen, dtype=dtype)
 
-def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
+def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0, load_train=True):
     '''
     x_datapath : path for X.pickle
     y_datapath : path for y.pickle
@@ -120,7 +125,8 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
     global labels, y_train, y_test, y_valid, MAX_LABELS, index2label, labels2index
     logger.debug('loading data from: '+x_datapath)
     data = cPickle.load(open(x_datapath))
-    train, test, valid = data['train'], data['test'], data['valid']
+    train = data['train'] if load_train else None
+    test, valid = data['test'], data['valid']
     if(cut<1.0):
         cutf = lambda x, c: x[:int(len(x)*cut)]
         train = cutf(train, cut)
@@ -129,14 +135,11 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
         data2 = {'train':train, 'valid':valid, 'test':test}
         cPickle.dump(data2, open(x_datapath+str(cut)+'.pickle', 'w'))
 
-    train = multihot3D(train, NUM_NOTES)
+    train = multihot3D(train, NUM_NOTES) if load_train else None
     test  = multihot3D(test, NUM_NOTES)
     valid = multihot3D(valid, NUM_NOTES)
     maxlen2D = lambda x : max([len(s) for s in x])
     MAX_CHORDS = max( map(maxlen2D, [train, test, valid]))
-    # train = sequence.pad_sequences(train, MAX_CHORDS)
-    # test = sequence.pad_sequences(test, MAX_CHORDS)
-    # valid = sequence.pad_sequences(valid, MAX_CHORDS)
     # TODO: NORMALIZE!!!
 
     logger.debug('loading labels from: '+y_datapath)
@@ -251,5 +254,3 @@ def main():
     load_data(x_datapath=x_datapath, y_datapath=y_datapath)
     run_experiment(**locals())
 
-if __name__ == '__main__':
-    main()
