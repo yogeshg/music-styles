@@ -52,7 +52,6 @@ def get_conv_stack(input_layer, filters, kernel_sizes, activation, kernel_l2_reg
 def get_model(embeddings=True):
     params = {k:v for k,v in locals().iteritems() if k!='weights'}
     # x = Input(shape=(NUM_NOTES,), dtype='float32')
-    # TODO: NORMALIZE!!!
     x = Input(shape=(MAX_CHORDS,NUM_NOTES), dtype='float32')
     if embeddings:
         y1 = Dense(NUM_DIM, activation='linear', use_bias=False, weights=[M1], trainable=False)(x)
@@ -110,6 +109,8 @@ def multihot3D(x, r, maxlen=None, dtype=np.float32):
     return x_mh
     # return square3D(x_mh, maxlen=maxlen, dtype=dtype)
 
+
+
 def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
     '''
     x_datapath : path for X.pickle
@@ -137,7 +138,6 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
     # train = sequence.pad_sequences(train, MAX_CHORDS)
     # test = sequence.pad_sequences(test, MAX_CHORDS)
     # valid = sequence.pad_sequences(valid, MAX_CHORDS)
-    # TODO: NORMALIZE!!!
 
     logger.debug('loading labels from: '+y_datapath)
     labels = cPickle.load(open(y_datapath))
@@ -207,11 +207,19 @@ def save_history(history, dirpath):
 
     return
 
+def norm_pad(x, MAX_CHORDS):
+    '''
+    data is a list of lists of numpy arrays output of multihot3D
+    '''
+    pad = sequence.pad_sequences(x, MAX_CHORDS)
+    norm_pad = np.divide(pad, np.maximum(np.sum(pad, axis=2),1).reshape((pad.shape[0], pad.shape[1], 1)).astype('float32'))
+    return norm_pad
+
 def run_experiment(**kwargs):    
     model, params = get_model( kwargs['embeddings'] )
     hyperparams = fill_dict(params, kwargs)
     
-    transforms = [lambda x:sequence.pad_sequences(x, MAX_CHORDS), lambda y:y]
+    transforms = [lambda x:norm_pad(x, MAX_CHORDS), lambda y:y]
     dm_train = DataManager(train, y_train, batch_size=c.batch_size, maxepochs=c.epochs+1, transforms=transforms)
     dm_valid = DataManager(valid, y_valid, batch_size=c.batch_size, maxepochs=100*c.epochs+1, transforms=transforms)
     
