@@ -168,6 +168,7 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
     y_test = to_categorical(map(labels2index, labels['test']), MAX_LABELS)
     y_valid = to_categorical(map(labels2index, labels['valid']), MAX_LABELS)
     unique, counts = np.unique(np.argmax(y_train,axis=1), return_counts=True)
+    counts = np.sqrt(counts)
     train_weights=dict(zip(unique, np.divide(np.sum(counts),counts.astype('float32'))))
 
 class DataManager():
