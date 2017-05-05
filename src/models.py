@@ -65,7 +65,8 @@ def get_model(embeddings=True, dilated_convs=False):
     y3 = GlobalMaxPool1D()(y2)
     y = Dense(MAX_LABELS, activation='sigmoid')(y3)
     model = Model(x, y)
-    model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=c.metrics)
+    adam = Adam(lr=c.lr)
+    model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=c.metrics)
     return (model, params)
 
 def load_embeddings(embeddings_path='/home/yg2482/code/chord2vec/data/chord2vec_199.npz'):
