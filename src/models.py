@@ -121,6 +121,7 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
     '''
     global data, train, test, valid, MAX_CHORDS
     global labels, y_train, y_test, y_valid, MAX_LABELS, index2label, labels2index
+    global train_weights
     logger.debug('loading data from: '+x_datapath)
     data = cPickle.load(open(x_datapath))
     train, test, valid = data['train'], data['test'], data['valid']
@@ -166,7 +167,8 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
     y_train = to_categorical(map(labels2index, labels['train']), MAX_LABELS)
     y_test = to_categorical(map(labels2index, labels['test']), MAX_LABELS)
     y_valid = to_categorical(map(labels2index, labels['valid']), MAX_LABELS)
-
+    unique, counts = np.unique(np.argmax(y_train,axis=1), return_counts=True)
+    train_weights=dict(zip(unique, np.divide(np.sum(counts),counts.astype('float32'))))
 
 class DataManager():
     def __init__(self, inputs, targets, batch_size=128, maxepochs=10, transforms=lambda x:x):
@@ -248,7 +250,7 @@ def run_experiment(**kwargs):
         logger.info(str((dm_train.num_batches, dm_valid.num_batches)))
         h = model.fit_generator(generator=dm_train.batch_generator(), steps_per_epoch=dm_train.num_batches, epochs=c.epochs,
                         validation_data=dm_valid.batch_generator(), validation_steps=dm_valid.num_batches,
-                        callbacks=[earlystopping, modelcheckpoint, csvlogger] )
+                        callbacks=[earlystopping, modelcheckpoint, csvlogger], class_weight=train_weights)
 
         save_history(h, a.getDirPath())
 
