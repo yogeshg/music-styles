@@ -33,7 +33,7 @@ NUM_DIM = 1024
 M1 = M2 = W = b2 = None
 data= train= test= valid= MAX_CHORDS = None
 labels= y_train= y_test= y_valid= MAX_LABELS= index2label= labels2index = None
-
+train_weights= None
 
 class LogSumExpPooling(Layer):
 
@@ -112,7 +112,8 @@ def multihot3D(x, r, maxlen=None, dtype=np.float32):
     return x_mh
     # return square3D(x_mh, maxlen=maxlen, dtype=dtype)
 
-def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0, load_train=True):
+def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0,
+        load_train=True, train_params_path='data/train_params.npz'):
     '''
     x_datapath : path for X.pickle
     y_datapath : path for y.pickle
@@ -120,6 +121,8 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0, l
     '''
     global data, train, test, valid, MAX_CHORDS
     global labels, y_train, y_test, y_valid, MAX_LABELS, index2label, labels2index
+    global train_weights
+
     logger.debug('loading data from: '+x_datapath)
     data = cPickle.load(open(x_datapath))
     train = data['train'] if load_train else None
@@ -164,7 +167,7 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0, l
     y_train = to_categorical(map(labels2index, labels['train']), MAX_LABELS)
     y_test = to_categorical(map(labels2index, labels['test']), MAX_LABELS)
     y_valid = to_categorical(map(labels2index, labels['valid']), MAX_LABELS)
-
+    train_weights = np.load(train_params_path)['train_weights']
 
 class DataManager():
     def __init__(self, inputs, targets, batch_size=128, maxepochs=10, transforms=lambda x:x):
@@ -238,7 +241,7 @@ def run_experiment(**kwargs):
         logger.info(str((dm_train.num_batches, dm_valid.num_batches)))
         h = model.fit_generator(generator=dm_train.batch_generator(), steps_per_epoch=dm_train.num_batches, epochs=c.epochs,
                         validation_data=dm_valid.batch_generator(), validation_steps=dm_valid.num_batches,
-                        callbacks=[earlystopping, modelcheckpoint, csvlogger] )
+                        callbacks=[earlystopping, modelcheckpoint, csvlogger], class_weight=train_weights )
     
         save_history(h, a.getDirPath())
 
