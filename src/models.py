@@ -252,7 +252,7 @@ def run_experiment(**kwargs):
 
         save_history(h, a.getDirPath())
 
-def pred(trial_ts='20170504_155518', x_datapath='../data/tmp/X.pickle', y_datapath='../data/tmp/y.pickle', model_folder='data'):
+def pred(trial_ts='20170504_155518', x_datapath='../data/tmp/X.pickle', y_datapath='../data/tmp/y.pickle', model_folder='data', save=None):
     if not os.path.exists(x_datapath) or not os.path.exists(y_datapath):
         print("data file doesn't exist")
         return
@@ -266,14 +266,18 @@ def pred(trial_ts='20170504_155518', x_datapath='../data/tmp/X.pickle', y_datapa
         return
 
     load_data(x_datapath=x_datapath, y_datapath=y_datapath)
-    conf_mat(test, y_test, labels, savepath)
-
-def conf_mat(x, y):
+    MAX_CHORDS=5587
     transforms = [lambda x:norm_pad(x, MAX_CHORDS), lambda y:y]
-    dm_pred = DataManager(x, y, batch_size=c.batch_size, transforms=transforms)
+    dm_pred = DataManager(test, y_test, batch_size=c.batch_size, transforms=transforms)
     soft = model.predict_generator(generator=dm_pred.batch_generator(), steps=dm_pred.num_batches, verbose=1)
     pred = np.argmax(soft, axis=1)
     true = np.argmax(y_test, axis=1)
+    if save is not None:
+        with open(save, "w") as f:
+            f.write("pred,true\n")
+            for (p,t)in zip(pred,true):
+                f.write(str(p)+","+str(t)+"\n")
+
     cm = confusion_matrix(true, pred)
     print cm
 
