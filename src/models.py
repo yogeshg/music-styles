@@ -9,11 +9,13 @@ import math
 import json
 import sys
 import pandas as pd
+import os
+from sklearn.metrics import confusion_matrix
 
 import keras
 from keras.layers import Input, Embedding, Conv1D, GlobalMaxPool1D, Dense, GlobalAvgPool1D, Dropout
 from keras.layers import concatenate
-from keras.models import Model
+from keras.models import Model, model_from_json
 from keras.preprocessing import sequence
 from keras import regularizers
 from keras.engine.topology import Layer
@@ -25,7 +27,7 @@ from util import plot_model, plot_metric, save_code, fill_dict
 from util.archiver import get_archiver
 import config as c
 
-# MAX_CHORDS = 150
+#MAX_CHORDS = 5587
 # MAX_LABELS = 5
 NUM_NOTES = 88
 NUM_DIM = 1024
@@ -215,14 +217,14 @@ def norm_pad(x, MAX_CHORDS):
     norm_pad = np.divide(pad, np.maximum(np.sum(pad, axis=2),1).reshape((pad.shape[0], pad.shape[1], 1)).astype('float32'))
     return norm_pad
 
-def run_experiment(**kwargs):    
+def run_experiment(**kwargs):
     model, params = get_model( kwargs['embeddings'] )
     hyperparams = fill_dict(params, kwargs)
-    
+
     transforms = [lambda x:norm_pad(x, MAX_CHORDS), lambda y:y]
     dm_train = DataManager(train, y_train, batch_size=c.batch_size, maxepochs=c.epochs+1, transforms=transforms)
     dm_valid = DataManager(valid, y_valid, batch_size=c.batch_size, maxepochs=100*c.epochs+1, transforms=transforms)
-    
+
     with get_archiver(datadir='data/models') as a1, get_archiver(datadir='data/results') as a:
 
         with open(a.getFilePath('hyperparameters.json'), 'w') as f:
@@ -247,8 +249,34 @@ def run_experiment(**kwargs):
         h = model.fit_generator(generator=dm_train.batch_generator(), steps_per_epoch=dm_train.num_batches, epochs=c.epochs,
                         validation_data=dm_valid.batch_generator(), validation_steps=dm_valid.num_batches,
                         callbacks=[earlystopping, modelcheckpoint, csvlogger] )
-    
+
         save_history(h, a.getDirPath())
+
+def pred(trial_ts='20170504_155518', x_datapath='../data/tmp/X.pickle', y_datapath='../data/tmp/y.pickle', model_folder='data'):
+    if not os.path.exists(x_datapath) or not os.path.exists(y_datapath):
+        print("data file doesn't exist")
+        return
+    model_json_file = os.path.join(model_folder,'results/archive/', trial_ts + '_model.json')
+    model_weights = os.path.join(model_folder, 'models/archive/', trial_ts + '_weights.h5')
+    if os.path.exists(model_json_file) and os.path.exists(model_weights):
+        model = model_from_json(open(model_json_file, 'r').read())
+        model.load_weights(model_weights, by_name=False)
+    else:
+        print("model json or weights do not exist")
+        return
+
+    load_data(x_datapath=x_datapath, y_datapath=y_datapath)
+    conf_mat(test, y_test, labels, savepath)
+
+def conf_mat(x, y):
+    transforms = [lambda x:norm_pad(x, MAX_CHORDS), lambda y:y]
+    dm_pred = DataManager(x, y, batch_size=c.batch_size, transforms=transforms)
+    soft = model.predict_generator(generator=dm_pred.batch_generator(), steps=dm_pred.num_batches, verbose=1)
+    pred = np.argmax(soft, axis=1)
+    true = np.argmax(y_test, axis=1)
+    cm = confusion_matrix(true, pred)
+    print cm
+
 
 def main():
     commit_hash = save_code()
@@ -261,3 +289,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    #pred()
