@@ -167,7 +167,7 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0,
     y_train = to_categorical(map(labels2index, labels['train']), MAX_LABELS)
     y_test = to_categorical(map(labels2index, labels['test']), MAX_LABELS)
     y_valid = to_categorical(map(labels2index, labels['valid']), MAX_LABELS)
-    train_weights = np.load(train_params_path)['train_weights']
+    train_weights = dict(enumerate(np.load(train_params_path)['train_weights']))
 
 class DataManager():
     def __init__(self, inputs, targets, batch_size=128, maxepochs=10, transforms=lambda x:x):
