@@ -7,7 +7,7 @@ def main():
     y_datapath='../data/tmp/y.pickle'
     load_embeddings(embeddings_path=embeddings_path)
     load_data(x_datapath=x_datapath, y_datapath=y_datapath)
-    embeddings=False
+    embeddings=True
     run_experiment(**locals())
 
 main()
