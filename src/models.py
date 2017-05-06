@@ -11,6 +11,7 @@ import sys
 import pandas as pd
 import os
 from sklearn.metrics import confusion_matrix
+import random
 
 import keras
 from keras.layers import Input, Embedding, Conv1D, GlobalMaxPool1D, Dense, GlobalAvgPool1D, Dropout, BatchNormalization
