@@ -167,10 +167,12 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
     #counts = np.sqrt(counts)
     train_weights=dict(zip(unique, np.divide(np.sum(counts),counts.astype('float32'))))
     
-    t = list(zip(train, y_train))
+
+    c = zip(train, y_train)
     print len(t)
-    random.shuffle(t)
-    train, y_train = zip(*t)
+    random.shuffle(c)
+    train = [e[0] for e in c]
+    y_train = [e[1] for e in c]
     print len(train)
     print len(y_train)
 
