@@ -64,24 +64,37 @@ def get_conv_stack(input_layer, filters, kernel_sizes, activation, kernel_l2_reg
     else:
         return Dropout(dropout_rate, noise_shape=None, seed=None)(concatenate(layers))
 
-def get_model(use_embeddings=True, dilated_convs=False):
+def get_model(use_embeddings, dilated_convs, pooling, filter_sizes, num_filters, use_batch_normalization):
     params = {k:v for k,v in locals().iteritems() if k!='weights'}
     x = Input(shape=(MAX_CHORDS,NUM_NOTES), dtype='float32')
     if use_embeddings:
-        y1 = Dense(NUM_DIM, activation='linear', use_bias=False, weights=[M1], trainable=False)(x)
+        y = Dense(NUM_DIM, activation='linear', use_bias=False, weights=[M1], trainable=False)(x)
     else:
-        y1 = x
-    #y2 = BatchNormalization()(y1)
-    #y3 = get_conv_stack(y2, 5, range(1,4), 'relu', 0.00001, 0.5)
-    #y2 = GlobalMaxPool1D()(y1)
-    #y5 = BatchNormalization()(y4)
-    y2 = Flatten()(y1)
-    y3 = Dropout(0.5)(y2)
-    y4 = Dense(100)(y3)
-    y5 = BatchNormalization()(y4)
-    y6 = Activation('relu')(y5)
-    y7 = Dropout(0.5)(y6)
-    y = Dense(MAX_LABELS, activation='sigmoid')(y7)
+        y = x
+
+    if use_batch_normalization:
+        y = BatchNormalization()(y)
+
+    y = get_conv_stack(y, num_filters, filter_sizes, 'relu', 0.0001, 0.5)
+
+    if pooling == 'max':
+        y = GlobalMaxPool1D()(y)
+    elif pooling == 'avg':
+        y = GlobalAvgPool1D()(y)
+    elif pooling == 'flatten':
+        y = Flatten()(y)
+
+    y = Dropout(0.5)(y)
+    y = Dense(100)(y)
+
+    if use_batch_normalization:
+        y = BatchNormalization()(y)
+
+    y = Activation('relu')(y)
+    y = Dropout(0.5)(y)
+
+    y = Dense(MAX_LABELS, activation='sigmoid')(y)
+
     model = Model(x, y)
     adam = Adam(lr=c.lr)
     model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=c.metrics)
@@ -339,7 +352,15 @@ def norm_pad(x, MAX_CHORDS):
     return norm_pad
 
 def run_experiment(**kwargs):
-    model, params = get_model( kwargs['use_embeddings'] )
+
+    model, params = get_model(
+        kwargs['use_embeddings'],
+        kwargs['dilated_convs'],
+        kwargs['pooling'],
+        kwargs['filter_sizes'],
+        kwargs['num_filters'],
+        kwargs['use_batch_normalization'] )
+
     hyperparams = fill_dict(params, kwargs)
 
     transforms = [lambda x:norm_pad(x, MAX_CHORDS), lambda y:y]
@@ -384,6 +405,16 @@ def run_experiment(**kwargs):
         except Exception as e:
             logger.exception(e)
  
+def load_data_cached(filename):
+    global train, y_train, valid, y_valid, test, y_test
+    npzf = np.load(filename)
+    train = npzf['train']
+    y_train = npzf['y_train']
+    valid = npzf['valid']
+    y_valid = npzf['y_valid']
+    test = npzf['test']
+    y_test = npzf['y_test']
+    return
 
 def main():
     commit_hash = save_code()
@@ -393,6 +424,12 @@ def main():
     load_embeddings(embeddings_path=embeddings_path)
     load_data(x_datapath=x_datapath, y_datapath=y_datapath)
     use_embeddings = True
+    use_embeddings=True
+    dilated_convs=False
+    pooling = 'max'
+    filter_sizes=range(1,4)
+    num_filters=50
+    use_batch_normalization=False
     run_experiment(**locals())
 
 if __name__ == '__main__':
