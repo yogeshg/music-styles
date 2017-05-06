@@ -167,9 +167,12 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
     #counts = np.sqrt(counts)
     train_weights=dict(zip(unique, np.divide(np.sum(counts),counts.astype('float32'))))
     
-    #t = list(zip(train, y_train))
-    #random.shuffle(t)
-    #train, y_train = zip(*t)
+    t = list(zip(train, y_train))
+    print len(t)
+    random.shuffle(t)
+    train, y_train = zip(*t)
+    print len(train)
+    print len(y_train)
 
     train = multihot3D(train, NUM_NOTES)
     test  = multihot3D(test, NUM_NOTES)
