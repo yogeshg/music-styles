@@ -25,6 +25,7 @@ from keras.utils import to_categorical
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger
 
+import util
 from util import plot_model, plot_metric, save_code, fill_dict
 from util.archiver import get_archiver
 import config as c
