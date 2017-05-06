@@ -169,12 +169,17 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
     
 
     c = zip(train, y_train)
-    print len(c)
     #random.shuffle(c)
+    print type(train)
+    print type(y_train)
+    print train.shape
+    print y_train.shape
     train = [e[0] for e in c]
     y_train = [e[1] for e in c]
-    print len(train)
-    print len(y_train)
+    print type(train)
+    print type(y_train)
+    print train.shape
+    print y_train.shape
 
     train = multihot3D(train, NUM_NOTES)
     test  = multihot3D(test, NUM_NOTES)
