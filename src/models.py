@@ -130,9 +130,7 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
     logger.debug('loading data from: '+x_datapath)
     data = cPickle.load(open(x_datapath))
 
-    c = zip(data['train'], labels['train'])
-    random.shuffle(c)
-    data['train'], labels['train'] = zip(*c)
+
 
     train, test, valid = data['train'], data['test'], data['valid']
     if(cut<1.0):
@@ -152,7 +150,11 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
         test = cutf( labels['test'], cut)
         labels2 = {'train':train, 'valid':valid, 'test':test}
         cPickle.dump(labels2, open(y_datapath+str(cut)+'.pickle', 'w'))
-
+    
+    c = zip(data['train'], labels['train'])
+    random.shuffle(c)
+    data['train'], labels['train'] = zip(*c)
+    
     s = set()
     for k,v in labels.iteritems():
         for y in v:
