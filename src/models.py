@@ -24,6 +24,7 @@ from keras.engine.topology import Layer
 from keras.utils import to_categorical
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger
+from callbacks import SignalStopping
 
 import util
 from util import plot_model, plot_metric, save_code, fill_dict
@@ -177,12 +178,12 @@ def shuffle_train_valid(xt, yt, xv, yv):
     return (xt, yt, xv, yv)
 
 def log_about_data():
-    logger.debug( 'train:\n'+util.about(train, SINGLE_LINE=True) )
-    logger.debug( 'valid:\n'+util.about(valid, SINGLE_LINE=True) )
-    logger.debug( 'test:\n'+util.about(test, SINGLE_LINE=True) )
-    logger.debug( 'y_train:\n'+util.about(y_train, SINGLE_LINE=True) )
-    logger.debug( 'y_valid:\n'+util.about(y_valid, SINGLE_LINE=True) )
-    logger.debug( 'y_test:\n'+util.about(y_test, SINGLE_LINE=True) )
+    logger.info( 'train:\n'+util.about(train, SINGLE_LINE=True) )
+    logger.info( 'valid:\n'+util.about(valid, SINGLE_LINE=True) )
+    logger.info( 'test:\n'+util.about(test, SINGLE_LINE=True) )
+    logger.info( 'y_train:\n'+util.about(y_train, SINGLE_LINE=True) )
+    logger.info( 'y_valid:\n'+util.about(y_valid, SINGLE_LINE=True) )
+    logger.info( 'y_test:\n'+util.about(y_test, SINGLE_LINE=True) )
 
 def get_balanced_data_index(y, classes):
     c1 = Counter()
@@ -256,14 +257,15 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', load_train
     logger.info('test_train average: ' + str(np.average(index_test)))
     
     logger.info('converting to multihot')
-    
+   
+    logger.info('pool opened')
     pool = Pool(20)
     train = multihot3D(filter_data_by_index(data['train'], index_train), NUM_NOTES, pool=pool) if load_train else None
-    logging.info('train done')
+    logger.info('train done')
     valid = multihot3D(filter_data_by_index(data['valid'], index_valid), NUM_NOTES, pool=pool)
-    logging.info('valid done')
+    logger.info('valid done')
     test = multihot3D(filter_data_by_index(data['test'], index_test), NUM_NOTES, pool=pool)
-    logging.info('test done')
+    logger.info('test done')
     
     maxlen2D = lambda x : max([len(s) for s in x])
     MAX_CHORDS = max( map(maxlen2D, [train, test, valid]))
@@ -272,14 +274,15 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', load_train
     logger.info('converting to categorical')
     logger.info(labels2index('Country\n'))
     y_train = to_categorical(pool.map(labels2index, filter_data_by_index(labels['train'], index_train)), MAX_LABELS)
-    logging.info('train done')
+    logger.info('train done')
     y_test = to_categorical(pool.map(labels2index, filter_data_by_index(labels['test'], index_test)), MAX_LABELS)
-    logging.info('test done')
+    logger.info('test done')
     y_valid = to_categorical(pool.map(labels2index, filter_data_by_index(labels['valid'], index_valid)), MAX_LABELS)
-    logging.info('valid done')
+    logger.info('valid done')
     pool.close()
+    logger.info('pool closed')
 
-    log_about_data()
+    #log_about_data()
     
     return
 
@@ -363,11 +366,12 @@ def run_experiment(**kwargs):
         modelpath = a1.getFilePath('weights.h5')
         csvlogger = CSVLogger(a.getFilePath('logger.csv'))
         modelcheckpoint = ModelCheckpoint(modelpath, monitor=c.monitor, save_best_only=True, verbose=0, mode=c.monitor_objective)
+        signalstopping = SignalStopping()
         logger.info('starting training')
         logger.info(str((dm_train.num_batches, dm_valid.num_batches)))
         h = model.fit_generator(generator=dm_train.batch_generator(), steps_per_epoch=dm_train.num_batches, epochs=c.epochs,
                         validation_data=dm_valid.batch_generator(), validation_steps=dm_valid.num_batches,
-                        callbacks=[earlystopping, modelcheckpoint, csvlogger], class_weight=train_weights)
+                        callbacks=[earlystopping, modelcheckpoint, csvlogger, signalstopping], class_weight=train_weights)
         logger.info('ending training')
         save_history(h, a.getDirPath())
 

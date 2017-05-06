@@ -10,7 +10,7 @@ from sklearn.metrics import confusion_matrix
 
 def save_conf_mat(pred, true, dirpath):
     conf_arr = confusion_matrix(pred, true)
-    logger.info('generated confusion matrix: '+str(conf_arr))
+    logger.info('generated confusion matrix:\n'+str(conf_arr))
     norm_conf = []
     for i in conf_arr:
         a = 0
