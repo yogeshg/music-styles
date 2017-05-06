@@ -137,19 +137,6 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
         data2 = {'train':train, 'valid':valid, 'test':test}
         cPickle.dump(data2, open(x_datapath+str(cut)+'.pickle', 'w'))
 
-    t = list(zip(train, y_train))
-    random.shuffle(t)
-    train, y_train = zip(*t)
-
-    train = multihot3D(train, NUM_NOTES)
-    test  = multihot3D(test, NUM_NOTES)
-    valid = multihot3D(valid, NUM_NOTES)
-    maxlen2D = lambda x : max([len(s) for s in x])
-    MAX_CHORDS = max( map(maxlen2D, [train, test, valid]))
-    # train = sequence.pad_sequences(train, MAX_CHORDS)
-    # test = sequence.pad_sequences(test, MAX_CHORDS)
-    # valid = sequence.pad_sequences(valid, MAX_CHORDS)
-
     logger.debug('loading labels from: '+y_datapath)
     labels = cPickle.load(open(y_datapath))
     if(cut<1.0):
@@ -178,6 +165,20 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
     unique, counts = np.unique(np.argmax(y_train,axis=1), return_counts=True)
     #counts = np.sqrt(counts)
     train_weights=dict(zip(unique, np.divide(np.sum(counts),counts.astype('float32'))))
+    
+    t = list(zip(train, y_train))
+    random.shuffle(t)
+    train, y_train = zip(*t)
+
+    train = multihot3D(train, NUM_NOTES)
+    test  = multihot3D(test, NUM_NOTES)
+    valid = multihot3D(valid, NUM_NOTES)
+    maxlen2D = lambda x : max([len(s) for s in x])
+    MAX_CHORDS = max( map(maxlen2D, [train, test, valid]))
+    # train = sequence.pad_sequences(train, MAX_CHORDS)
+    # test = sequence.pad_sequences(test, MAX_CHORDS)
+    # valid = sequence.pad_sequences(valid, MAX_CHORDS)
+
 
 class DataManager():
     def __init__(self, inputs, targets, batch_size=128, maxepochs=10, transforms=lambda x:x):
