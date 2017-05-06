@@ -173,7 +173,30 @@ def log_about_data():
     logger.debug( 'y_train:\n'+util.about(y_train, SINGLE_LINE=True) )
     logger.debug( 'y_valid:\n'+util.about(y_valid, SINGLE_LINE=True) )
     logger.debug( 'y_test:\n'+util.about(y_test, SINGLE_LINE=True) )
+
+def get_balanced_data_index(y, classes):
+    c1 = Counter()
+    for l in y:
+        if l in classes:
+            c1[l]+=1
+    target = min( c1.values() )
+    logger.debug(str(classes))
+    logger.debug(str(c1))
+    logger.debug(str(target))
     
+    for k in c1.keys():
+        c1[k] = target
+
+    logger.debug(str(c1))
+
+    index = [False]*len(y)
+    for i in range(len(y)):
+        if(y[i] in c1.keys()):
+            if(c1[y[i]] > 0):
+                index[i] = True
+                c1[y[i]]-=1
+    return index
+ 
     
 def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', load_train=True):
     '''
