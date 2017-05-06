@@ -129,6 +129,11 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
     global train_weights
     logger.debug('loading data from: '+x_datapath)
     data = cPickle.load(open(x_datapath))
+
+    c = zip(data['train'], labels['train'])
+    random.shuffle(c)
+    data['train'], labels['train'] = zip(*c)
+
     train, test, valid = data['train'], data['test'], data['valid']
     if(cut<1.0):
         cutf = lambda x, c: x[:int(len(x)*cut)]
@@ -160,18 +165,8 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
 
     MAX_LABELS = len(_labels2index)
 
-    c = zip(train, y_train)
-    #random.shuffle(c)
-    print type(train)
-    print type(y_train)
-    print train.shape
-    print y_train.shape
-    train = [e[0] for e in c]
-    y_train = [e[1] for e in c]
-    print type(train)
-    print type(y_train)
-    print train.shape
-    print y_train.shape
+    #train = [e[0] for e in c]
+    #y_train = [e[1] for e in c]
 
     y_train = to_categorical(map(labels2index, labels['train']), MAX_LABELS)
     y_test = to_categorical(map(labels2index, labels['test']), MAX_LABELS)
