@@ -61,8 +61,9 @@ def get_model(embeddings=True):
         y1 = x
     #y2 = BatchNormalization()(y1)
     #y3 = get_conv_stack(y2, 5, range(1,4), 'relu', 0.00001, 0.5)
-    y2 = GlobalMaxPool1D()(y1)
+    #y2 = GlobalMaxPool1D()(y1)
     #y5 = BatchNormalization()(y4)
+    y2 = Flatten()(y1)
     y3 = Dense(100, activation='relu')(y2)
     y = Dense(MAX_LABELS, activation='sigmoid')(y3)
     model = Model(x, y)
@@ -135,6 +136,10 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
         test = cutf(test, cut)
         data2 = {'train':train, 'valid':valid, 'test':test}
         cPickle.dump(data2, open(x_datapath+str(cut)+'.pickle', 'w'))
+
+    t = list(zip(train, y_train))
+    random.shuffle(t)
+    train, y_train = zip(*t)
 
     train = multihot3D(train, NUM_NOTES)
     test  = multihot3D(test, NUM_NOTES)
