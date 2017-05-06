@@ -160,14 +160,6 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
 
     MAX_LABELS = len(_labels2index)
 
-    y_train = to_categorical(map(labels2index, labels['train']), MAX_LABELS)
-    y_test = to_categorical(map(labels2index, labels['test']), MAX_LABELS)
-    y_valid = to_categorical(map(labels2index, labels['valid']), MAX_LABELS)
-    unique, counts = np.unique(np.argmax(y_train,axis=1), return_counts=True)
-    #counts = np.sqrt(counts)
-    train_weights=dict(zip(unique, np.divide(np.sum(counts),counts.astype('float32'))))
-    
-
     c = zip(train, y_train)
     #random.shuffle(c)
     print type(train)
@@ -180,6 +172,16 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
     print type(y_train)
     print train.shape
     print y_train.shape
+
+    y_train = to_categorical(map(labels2index, labels['train']), MAX_LABELS)
+    y_test = to_categorical(map(labels2index, labels['test']), MAX_LABELS)
+    y_valid = to_categorical(map(labels2index, labels['valid']), MAX_LABELS)
+    unique, counts = np.unique(np.argmax(y_train,axis=1), return_counts=True)
+    #counts = np.sqrt(counts)
+    train_weights=dict(zip(unique, np.divide(np.sum(counts),counts.astype('float32'))))
+    
+
+
 
     train = multihot3D(train, NUM_NOTES)
     test  = multihot3D(test, NUM_NOTES)
