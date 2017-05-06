@@ -11,9 +11,10 @@ import sys
 import pandas as pd
 import os
 from sklearn.metrics import confusion_matrix
+import random
 
 import keras
-from keras.layers import Input, Embedding, Conv1D, GlobalMaxPool1D, Dense, GlobalAvgPool1D, Dropout
+from keras.layers import Input, Embedding, Conv1D, GlobalMaxPool1D, Dense, GlobalAvgPool1D, Dropout, BatchNormalization, Flatten, Activation
 from keras.layers import concatenate
 from keras.models import Model, model_from_json
 from keras.preprocessing import sequence
@@ -29,7 +30,7 @@ import config as c
 
 MAX_CHORDS = None
 MAX_LABELS = None
-#MAX_CHORDS = 5587
+# MAX_CHORDS = 5587
 # MAX_LABELS = 13
 NUM_NOTES = 88
 NUM_DIM = 1024
@@ -65,9 +66,17 @@ def get_model(embeddings=True, dilated_convs=False):
         y1 = Dense(NUM_DIM, activation='linear', use_bias=False, weights=[M1], trainable=False)(x)
     else:
         y1 = x
-    y2 = get_conv_stack(y1, 5, range(1,4), 'relu', 0.00001, 0.5)
-    y3 = GlobalMaxPool1D()(y2)
-    y = Dense(MAX_LABELS, activation='sigmoid')(y3)
+    #y2 = BatchNormalization()(y1)
+    #y3 = get_conv_stack(y2, 5, range(1,4), 'relu', 0.00001, 0.5)
+    #y2 = GlobalMaxPool1D()(y1)
+    #y5 = BatchNormalization()(y4)
+    y2 = Flatten()(y1)
+    y3 = Dropout(0.5)(y2)
+    y4 = Dense(100)(y3)
+    y5 = BatchNormalization()(y4)
+    y6 = Activation('relu')(y5)
+    y7 = Dropout(0.5)(y6)
+    y = Dense(MAX_LABELS, activation='sigmoid')(y7)
     model = Model(x, y)
     adam = Adam(lr=c.lr)
     model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=c.metrics)
@@ -117,8 +126,23 @@ def multihot3D(x, r, maxlen=None, dtype=np.float32):
     return x_mh
     # return square3D(x_mh, maxlen=maxlen, dtype=dtype)
 
-def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0,
-        load_train=True, train_params_path='data/train_params.npz'):
+import random
+def shuffle_train_valid(xt, yt, xv, yv):
+    l1 = len(yt)
+    l2 = len(yv)
+    assert (l1 == len(xt))
+    assert (l2 == len(xv))
+    c = zip(xt+xv, yt+yv)
+    random.shuffle(c)
+    xtv, ytv = zip(*c)
+    xt = xtv[:l1]
+    xv = xtv[l1:]
+    yt = ytv[:l1]
+    yv = ytv[l1:]
+    return (xt, yt, xv, yv)
+
+def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0, load_train=True):
+def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
     '''
     x_datapath : path for X.pickle
     y_datapath : path for y.pickle
@@ -132,6 +156,10 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0,
     data = cPickle.load(open(x_datapath))
     train = data['train'] if load_train else None
     test, valid = data['test'], data['valid']
+
+    logger.debug('loading labels from: '+y_datapath)
+    labels = cPickle.load(open(y_datapath))
+
     if(cut<1.0):
         cutf = lambda x, c: x[:int(len(x)*cut)]
         train = cutf(train, cut)
@@ -140,14 +168,6 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0,
         data2 = {'train':train, 'valid':valid, 'test':test}
         cPickle.dump(data2, open(x_datapath+str(cut)+'.pickle', 'w'))
 
-    train = multihot3D(train, NUM_NOTES) if load_train else None
-    test  = multihot3D(test, NUM_NOTES)
-    valid = multihot3D(valid, NUM_NOTES)
-    maxlen2D = lambda x : max([len(s) for s in x])
-    MAX_CHORDS = max( map(maxlen2D, [train, test, valid]))
-
-    logger.debug('loading labels from: '+y_datapath)
-    labels = cPickle.load(open(y_datapath))
     if(cut<1.0):
         cutf = lambda x, c: x[:int(len(x)*cut)]
         train = cutf(labels['train'], cut)
@@ -155,6 +175,9 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0,
         test = cutf( labels['test'], cut)
         labels2 = {'train':train, 'valid':valid, 'test':test}
         cPickle.dump(labels2, open(y_datapath+str(cut)+'.pickle', 'w'))
+
+    (data['train'], labels['train'], data['valid'], labels['valid'] ) = \
+        shuffle_train_valid( data['train'], labels['train'], data['valid'], labels['valid'] )
 
     s = set()
     for k,v in labels.iteritems():
@@ -171,7 +194,20 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0,
     y_train = to_categorical(map(labels2index, labels['train']), MAX_LABELS)
     y_test = to_categorical(map(labels2index, labels['test']), MAX_LABELS)
     y_valid = to_categorical(map(labels2index, labels['valid']), MAX_LABELS)
-    train_weights = dict(enumerate(np.load(train_params_path)['train_weights']))
+    unique, counts = np.unique(np.argmax(y_train,axis=1), return_counts=True)
+    #counts = np.sqrt(counts)
+    train_weights=dict(zip(unique, np.divide(np.sum(counts),counts.astype('float32'))))
+
+    logging.debug('creating multihot')
+    train = multihot3D(train, NUM_NOTES)
+    test  = multihot3D(test, NUM_NOTES)
+    valid = multihot3D(valid, NUM_NOTES)
+    maxlen2D = lambda x : max([len(s) for s in x])
+    MAX_CHORDS = max( map(maxlen2D, [train, test, valid]))
+    # train = sequence.pad_sequences(train, MAX_CHORDS)
+    # test = sequence.pad_sequences(test, MAX_CHORDS)
+    # valid = sequence.pad_sequences(valid, MAX_CHORDS)
+
 
 class DataManager():
     def __init__(self, inputs, targets, batch_size=128, maxepochs=10, transforms=lambda x:x):
@@ -253,10 +289,10 @@ def run_experiment(**kwargs):
         logger.info(str((dm_train.num_batches, dm_valid.num_batches)))
         h = model.fit_generator(generator=dm_train.batch_generator(), steps_per_epoch=dm_train.num_batches, epochs=c.epochs,
                         validation_data=dm_valid.batch_generator(), validation_steps=dm_valid.num_batches,
-                        callbacks=[earlystopping, modelcheckpoint, csvlogger], class_weight=train_weights )
+                        callbacks=[earlystopping, modelcheckpoint, csvlogger], class_weight=train_weights)
         save_history(h, a.getDirPath())
 
-def pred(trial_ts='20170504_155518', x_datapath='../data/tmp/X.pickle', y_datapath='../data/tmp/y.pickle', model_folder='data', save=None):
+def pred(trial_ts='20170506_005543', x_datapath='../data/X.pickle', y_datapath='../data/y.pickle', model_folder='data', save=None, max_chords=5112):
     if not os.path.exists(x_datapath) or not os.path.exists(y_datapath):
         print("data file doesn't exist")
         return
@@ -270,7 +306,7 @@ def pred(trial_ts='20170504_155518', x_datapath='../data/tmp/X.pickle', y_datapa
         return
 
     load_data(x_datapath=x_datapath, y_datapath=y_datapath)
-    MAX_CHORDS=5587
+    MAX_CHORDS=max_chords
     transforms = [lambda x:norm_pad(x, MAX_CHORDS), lambda y:y]
     dm_pred = DataManager(test, y_test, batch_size=c.batch_size, transforms=transforms)
     soft = model.predict_generator(generator=dm_pred.batch_generator(), steps=dm_pred.num_batches, verbose=1)
@@ -282,8 +318,7 @@ def pred(trial_ts='20170504_155518', x_datapath='../data/tmp/X.pickle', y_datapa
             for (p,t)in zip(pred,true):
                 f.write(str(p)+","+str(t)+"\n")
 
-    cm = confusion_matrix(true, pred)
-    print cm
+    return pred, true
 
 
 def main():
