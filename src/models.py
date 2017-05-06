@@ -229,6 +229,7 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', load_train
     index2label =  lambda x : _index2label[x]
     _labels2index = {v:k for k,v in l}
     labels2index = lambda x : _labels2index[x]
+    MAX_LABELS = len(_labels2index)
 
     two_most_common = map( lambda x:x[0], s.most_common(n=2))
     logging.info('two most common: ' + str(s.most_common(n=2)))
