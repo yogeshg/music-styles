@@ -14,7 +14,7 @@ from sklearn.metrics import confusion_matrix
 import random
 
 import keras
-from keras.layers import Input, Embedding, Conv1D, GlobalMaxPool1D, Dense, GlobalAvgPool1D, Dropout, BatchNormalization
+from keras.layers import Input, Embedding, Conv1D, GlobalMaxPool1D, Dense, GlobalAvgPool1D, Dropout, BatchNormalization, Flatten
 from keras.layers import concatenate
 from keras.models import Model, model_from_json
 from keras.preprocessing import sequence
