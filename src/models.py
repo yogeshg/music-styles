@@ -28,6 +28,8 @@ from util import plot_model, plot_metric, save_code, fill_dict
 from util.archiver import get_archiver
 import config as c
 
+from conf_mat import save_conf_mat
+
 MAX_CHORDS = None
 MAX_LABELS = None
 # MAX_CHORDS = 5587
@@ -59,10 +61,10 @@ def get_conv_stack(input_layer, filters, kernel_sizes, activation, kernel_l2_reg
     else:
         return Dropout(dropout_rate, noise_shape=None, seed=None)(concatenate(layers))
 
-def get_model(embeddings=True, dilated_convs=False):
+def get_model(use_embeddings=True, dilated_convs=False):
     params = {k:v for k,v in locals().iteritems() if k!='weights'}
     x = Input(shape=(MAX_CHORDS,NUM_NOTES), dtype='float32')
-    if embeddings:
+    if use_embeddings:
         y1 = Dense(NUM_DIM, activation='linear', use_bias=False, weights=[M1], trainable=False)(x)
     else:
         y1 = x
@@ -142,7 +144,6 @@ def shuffle_train_valid(xt, yt, xv, yv):
     return (xt, yt, xv, yv)
 
 def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0, load_train=True):
-def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
     '''
     x_datapath : path for X.pickle
     y_datapath : path for y.pickle
@@ -248,6 +249,9 @@ def save_history(history, dirpath):
     for m in c.metrics + ['loss']:
         plot_metric(df, m, i, dirpath)
 
+    # pred, true = pred(trial_ts=trial_ts, x_datapath=x_datapath, y_datapath=y_datapath, model_folder=model_folder, save=save)
+
+
     return
 
 def norm_pad(x, MAX_CHORDS):
@@ -259,12 +263,13 @@ def norm_pad(x, MAX_CHORDS):
     return norm_pad
 
 def run_experiment(**kwargs):
-    model, params = get_model( kwargs['embeddings'] )
+    model, params = get_model( kwargs['use_embeddings'] )
     hyperparams = fill_dict(params, kwargs)
 
     transforms = [lambda x:norm_pad(x, MAX_CHORDS), lambda y:y]
-    dm_train = DataManager(train, y_train, batch_size=c.batch_size, maxepochs=c.epochs+1, transforms=transforms)
+    dm_train = DataManager(train, y_train, batch_size=c.batch_size, maxepochs=100*c.epochs+1, transforms=transforms)
     dm_valid = DataManager(valid, y_valid, batch_size=c.batch_size, maxepochs=100*c.epochs+1, transforms=transforms)
+    dm_test = DataManager(test, y_test, batch_size=c.batch_size, maxepochs=100*c.epochs+1, transforms=transforms)
 
     with get_archiver(datadir='data/models') as a1, get_archiver(datadir='data/results') as a:
 
@@ -290,44 +295,27 @@ def run_experiment(**kwargs):
         h = model.fit_generator(generator=dm_train.batch_generator(), steps_per_epoch=dm_train.num_batches, epochs=c.epochs,
                         validation_data=dm_valid.batch_generator(), validation_steps=dm_valid.num_batches,
                         callbacks=[earlystopping, modelcheckpoint, csvlogger], class_weight=train_weights)
+        logger.info('ending training')
         save_history(h, a.getDirPath())
 
-def pred(trial_ts='20170506_005543', x_datapath='../data/X.pickle', y_datapath='../data/y.pickle', model_folder='data', save=None, max_chords=5112):
-    if not os.path.exists(x_datapath) or not os.path.exists(y_datapath):
-        print("data file doesn't exist")
-        return
-    model_json_file = os.path.join(model_folder,'results/archive/', trial_ts + '_model.json')
-    model_weights = os.path.join(model_folder, 'models/archive/', trial_ts + '_weights.h5')
-    if os.path.exists(model_json_file) and os.path.exists(model_weights):
-        model = model_from_json(open(model_json_file, 'r').read())
-        model.load_weights(model_weights, by_name=False)
-    else:
-        print("model json or weights do not exist")
-        return
-
-    load_data(x_datapath=x_datapath, y_datapath=y_datapath)
-    MAX_CHORDS=max_chords
-    transforms = [lambda x:norm_pad(x, MAX_CHORDS), lambda y:y]
-    dm_pred = DataManager(test, y_test, batch_size=c.batch_size, transforms=transforms)
-    soft = model.predict_generator(generator=dm_pred.batch_generator(), steps=dm_pred.num_batches, verbose=1)
-    pred = np.argmax(soft, axis=1)
-    true = np.argmax(y_test, axis=1)
-    if save is not None:
-        with open(save, "w") as f:
-            f.write("pred,true\n")
-            for (p,t)in zip(pred,true):
-                f.write(str(p)+","+str(t)+"\n")
-
-    return pred, true
-
+        logger.info('creating confusion matrix')
+        soft = model.predict_generator(generator=dm_test.batch_generator(), steps=dm_test.num_batches, verbose=1)
+        pred = np.argmax(soft, axis=1)
+        true = np.argmax(y_test, axis=1)
+        try:
+            cm = save_conf_mat(true, pred, a.getDirPath())
+        except Exception as e:
+            logger.exception(e)
+ 
 
 def main():
     commit_hash = save_code()
-    embeddings_path = '/home/yg2482/code/chord2vec/data/chord2vec_199.npz'
-    x_datapath='data/X.001.pickle'
-    y_datapath='data/y.001.pickle'
+    embeddings_path = 'data2/chord2vec_30hr.npz'
+    x_datapath='data2/X.001.pickle'
+    y_datapath='data2/y.001.pickle'
     load_embeddings(embeddings_path=embeddings_path)
     load_data(x_datapath=x_datapath, y_datapath=y_datapath)
+    use_embeddings = True
     run_experiment(**locals())
 
 if __name__ == '__main__':

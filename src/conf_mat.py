@@ -1,13 +1,16 @@
-from models import pred
+import logging
+logging.basicConfig(level = logging.INFO , format=
+        '%(asctime)s:%(levelname)s:%(name)s:%(threadName)s:line %(lineno)d: %(message)s')
+logger = logging.getLogger(__name__)
 
 import numpy as np
 import matplotlib.pyplot as plt
 import os
 from sklearn.metrics import confusion_matrix
 
-def conf_mat(pred, true, model_folder, trial_ts):
+def save_conf_mat(pred, true, dirpath):
     conf_arr = confusion_matrix(pred, true)
-    print conf_arr
+    logger.info('generated confusion matrix: '+str(conf_arr))
     norm_conf = []
     for i in conf_arr:
         a = 0
@@ -34,18 +37,15 @@ def conf_mat(pred, true, model_folder, trial_ts):
 
     cb = fig.colorbar(res)
     #alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    plt.title(str(trial_ts)+'conf_matrix\naccuracy:'+str(np.sum(np.equal(pred, true))/float(len(pred))))
+    accuracy = np.sum(np.equal(pred, true))/float(len(pred))
+    plt.title('confusion matrix\naccuracy:'+str(accuracy))
     plt.xticks(range(width))#, alphabet[:width])
     plt.yticks(range(height))#, alphabet[:height])
-    plt.savefig(os.path.join(model_folder,'results','archive',trial_ts+'con_mat.png'), format='png')
+    plt.savefig(os.path.join(dirpath, 'confmat.png'), format='png')
+    try:
+        np.savez(os.path.join(dirpath, 'confmat.npz'), np.array(conf_arr))
+    except Exception as e:
+        logger.exception(e)
+    return conf_arr
 
-if __name__=='__main__':
-    model_folder = 'data'
-    save=None
-    trial_ts='20170506_005543'
-    x_datapath='../data/X.pickle'
-    y_datapath='../data/y.pickle'
-    pred, true = pred(trial_ts=trial_ts, x_datapath=x_datapath, y_datapath=y_datapath, model_folder=model_folder, save=save)
-    cm = conf_mat(true, pred, model_folder, trial_ts)
-    print('accuracy:', np.sum(np.equal(pred, true))/float(len(pred)))
-    print cm
+
