@@ -27,7 +27,7 @@ from util import plot_model, plot_metric, save_code, fill_dict
 from util.archiver import get_archiver
 import config as c
 
-#MAX_CHORDS = 5587
+# MAX_CHORDS = 5587
 # MAX_LABELS = 5
 NUM_NOTES = 88
 NUM_DIM = 1024
@@ -61,7 +61,8 @@ def get_model(embeddings=True):
         y1 = x
     y2 = get_conv_stack(y1, 5, range(1,4), 'relu', 0.00001, 0.5)
     y3 = GlobalMaxPool1D()(y2)
-    y = Dense(MAX_LABELS, activation='sigmoid')(y3)
+    y4 = Dense(100, activation='relu')(y3)
+    y = Dense(MAX_LABELS, activation='sigmoid')(y4)
     model = Model(x, y)
     adam = Adam(lr = c.lr)
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=c.metrics)
@@ -255,7 +256,7 @@ def run_experiment(**kwargs):
 
         save_history(h, a.getDirPath())
 
-def pred(trial_ts='20170504_155518', x_datapath='../data/tmp/X.pickle', y_datapath='../data/tmp/y.pickle', model_folder='data', save=None):
+def pred(trial_ts='20170505_123642', x_datapath='../data/X.pickle', y_datapath='../data/y.pickle', model_folder='data', save=None):
     if not os.path.exists(x_datapath) or not os.path.exists(y_datapath):
         print("data file doesn't exist")
         return
@@ -269,7 +270,7 @@ def pred(trial_ts='20170504_155518', x_datapath='../data/tmp/X.pickle', y_datapa
         return
 
     load_data(x_datapath=x_datapath, y_datapath=y_datapath)
-    MAX_CHORDS=5587
+    #MAX_CHORDS=5112
     transforms = [lambda x:norm_pad(x, MAX_CHORDS), lambda y:y]
     dm_pred = DataManager(test, y_test, batch_size=c.batch_size, transforms=transforms)
     soft = model.predict_generator(generator=dm_pred.batch_generator(), steps=dm_pred.num_batches, verbose=1)
