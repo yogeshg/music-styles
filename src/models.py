@@ -128,7 +128,29 @@ def multihot3D(x, r, maxlen=None, dtype=np.float32):
     return x_mh
     # return square3D(x_mh, maxlen=maxlen, dtype=dtype)
 
+def filter_data_by_index(data, idx):
+    return [x for i,x in enumerate(data) if idx[i]]
+    
+def filter_index(X,y,idx):    
+    idxs = map(lambda x:x[idx]!=1,y)
+    filter_indices = lambda data : [x for i,x in enumerate(data) if idxs[i]]
+    return filter_indices(X), filter_indices(y)
+
+
+
+def filter_majority_index():
+    global train, y_train, test, y_test, valid, y_valid
+    most_common_index = np.argmax(y_train.sum(axis=0))
+    (train, y_train) = filter_index(train, y_train, most_common_index)
+    (test, y_test) = filter_index(test, y_test, most_common_index)
+    (valid, y_valid) = filter_index(valid, y_valid, most_common_index)
+    y_train = np.array(y_train)
+    y_test = np.array(y_test)
+    y_valid = np.array(y_valid)
+    
+
 import random
+
 def shuffle_train_valid(xt, yt, xv, yv):
     l1 = len(yt)
     l2 = len(yv)
@@ -140,10 +162,19 @@ def shuffle_train_valid(xt, yt, xv, yv):
     xt = xtv[:l1]
     xv = xtv[l1:]
     yt = ytv[:l1]
-    yv = ytv[l1:]
+    yv = ytv[l1:]    
     return (xt, yt, xv, yv)
 
-def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0, load_train=True):
+def log_about_data():
+    logger.debug( 'train:\n'+util.about(train, SINGLE_LINE=True) )
+    logger.debug( 'valid:\n'+util.about(valid, SINGLE_LINE=True) )
+    logger.debug( 'test:\n'+util.about(test, SINGLE_LINE=True) )
+    logger.debug( 'y_train:\n'+util.about(y_train, SINGLE_LINE=True) )
+    logger.debug( 'y_valid:\n'+util.about(y_valid, SINGLE_LINE=True) )
+    logger.debug( 'y_test:\n'+util.about(y_test, SINGLE_LINE=True) )
+    
+    
+def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', load_train=True):
     '''
     x_datapath : path for X.pickle
     y_datapath : path for y.pickle
@@ -155,60 +186,53 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0, l
 
     logger.debug('loading data from: '+x_datapath)
     data = cPickle.load(open(x_datapath))
-    train = data['train'] if load_train else None
-    test, valid = data['test'], data['valid']
 
     logger.debug('loading labels from: '+y_datapath)
     labels = cPickle.load(open(y_datapath))
 
-    if(cut<1.0):
-        cutf = lambda x, c: x[:int(len(x)*cut)]
-        train = cutf(train, cut)
-        valid = cutf(valid, cut)
-        test = cutf(test, cut)
-        data2 = {'train':train, 'valid':valid, 'test':test}
-        cPickle.dump(data2, open(x_datapath+str(cut)+'.pickle', 'w'))
-
-    if(cut<1.0):
-        cutf = lambda x, c: x[:int(len(x)*cut)]
-        train = cutf(labels['train'], cut)
-        valid = cutf(labels['valid'], cut)
-        test = cutf( labels['test'], cut)
-        labels2 = {'train':train, 'valid':valid, 'test':test}
-        cPickle.dump(labels2, open(y_datapath+str(cut)+'.pickle', 'w'))
-
+    logging.debug('shuffling train and valid data and labels')
     (data['train'], labels['train'], data['valid'], labels['valid'] ) = \
         shuffle_train_valid( data['train'], labels['train'], data['valid'], labels['valid'] )
 
-    s = set()
+    s = Counter()
     for k,v in labels.iteritems():
         for y in v:
-            s.add(y)
-    l = list(enumerate(s))
+            s[y]+=1
+
+    l = list(enumerate(s.keys()))
     _index2label = {k:v for k,v in l}
     index2label =  lambda x : _index2label[x]
     _labels2index = {v:k for k,v in l}
     labels2index = lambda x : _labels2index[x]
 
-    MAX_LABELS = len(_labels2index)
-
-    y_train = to_categorical(map(labels2index, labels['train']), MAX_LABELS)
-    y_test = to_categorical(map(labels2index, labels['test']), MAX_LABELS)
-    y_valid = to_categorical(map(labels2index, labels['valid']), MAX_LABELS)
-    unique, counts = np.unique(np.argmax(y_train,axis=1), return_counts=True)
-    #counts = np.sqrt(counts)
-    train_weights=dict(zip(unique, np.divide(np.sum(counts),counts.astype('float32'))))
-
-    logging.debug('creating multihot')
-    train = multihot3D(train, NUM_NOTES)
-    test  = multihot3D(test, NUM_NOTES)
-    valid = multihot3D(valid, NUM_NOTES)
+    two_most_common = map( lambda x:x[0], s.most_common(n=2))
+    logging.info('two most common: ' + str(s.most_common(n=2)))
+    logging.info('two most common: ' + str(two_most_common))
+    
+    index_train = get_balanced_data_index(labels['train'], classes=two_most_common)
+    index_valid = get_balanced_data_index(labels['valid'], classes=two_most_common)
+    index_test = get_balanced_data_index(labels['test'], classes=two_most_common)
+    
+    logger.info('index_train average: ' + str(np.average(index_train)))
+    logger.info('valid_train average: ' + str(np.average(index_valid)))
+    logger.info('test_train average: ' + str(np.average(index_test)))
+    
+    logger.info('converting to multihot')
+    
+    train = multihot3D(filter_data_by_index(data['train'], index_train), NUM_NOTES) if load_train else None
+    valid = multihot3D(filter_data_by_index(data['valid'], index_valid), NUM_NOTES)
+    test = multihot3D(filter_data_by_index(data['test'], index_test), NUM_NOTES)
+    
     maxlen2D = lambda x : max([len(s) for s in x])
     MAX_CHORDS = max( map(maxlen2D, [train, test, valid]))
-    # train = sequence.pad_sequences(train, MAX_CHORDS)
-    # test = sequence.pad_sequences(test, MAX_CHORDS)
-    # valid = sequence.pad_sequences(valid, MAX_CHORDS)
+    
+    y_train = to_categorical(map(labels2index, filter_data_by_index(labels['train'], index_train)), MAX_LABELS)
+    y_test = to_categorical(map(labels2index, filter_data_by_index(labels['test'], index_test)), MAX_LABELS)
+    y_valid = to_categorical(map(labels2index, filter_data_by_index(labels['valid'], index_valid)), MAX_LABELS)
 
+    log_about_data()
+    
+    return
 
 class DataManager():
     def __init__(self, inputs, targets, batch_size=128, maxepochs=10, transforms=lambda x:x):
