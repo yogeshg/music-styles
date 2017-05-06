@@ -61,10 +61,10 @@ def get_model(embeddings=True):
         y1 = x
     #y2 = BatchNormalization()(y1)
     #y3 = get_conv_stack(y2, 5, range(1,4), 'relu', 0.00001, 0.5)
-    #y4 = GlobalMaxPool1D()(y3)
+    y2 = GlobalMaxPool1D()(y1)
     #y5 = BatchNormalization()(y4)
-    y2 = Dense(100, activation='relu')(y1)
-    y = Dense(MAX_LABELS, activation='sigmoid')(y2)
+    y3 = Dense(100, activation='relu')(y2)
+    y = Dense(MAX_LABELS, activation='sigmoid')(y3)
     model = Model(x, y)
     adam = Adam(lr = c.lr)
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=c.metrics)
