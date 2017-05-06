@@ -95,7 +95,7 @@ def load_embeddings(embeddings_path='/home/yg2482/code/chord2vec/data/chord2vec_
     W = npzf['wW']
     b2 = npzf['bM2']
 
-def indices2multihot(x, r, dtype=np.float32):
+def indices2multihot(r, dtype, x):
     v = np.zeros(r, dtype=dtype)
     # x should belong to [1, 88]
     x = filter(lambda x: x>0, x)
@@ -123,10 +123,19 @@ def square3D(x, maxlen=None, dtype=np.float32):
                     break
     return x_np
 
-def multihot3D(x, r, maxlen=None, dtype=np.float32):
-    f1D = lambda chord: indices2multihot(chord,r,dtype)
-    f2D = lambda song:map(f1D, song)
-    x_mh = map(f2D, x)
+from multiprocessing import Pool
+from functools import partial
+
+def multihot3D(x, r, maxlen=None, dtype=np.float32, pool=None):
+    #f1D = lambda chord: indices2multihot(chord,r,dtype)
+    f1D = partial(indices2multihot, r, dtype)
+    # f2D = lambda song:map(f1D, song)
+    f2D = partial(map, f1D)
+    if not pool is None:
+        x_mh = pool.map(f2D,x)
+    else:
+        x_mh = map(f2D, x)
+
     return x_mh
     # return square3D(x_mh, maxlen=maxlen, dtype=dtype)
 
@@ -198,7 +207,9 @@ def get_balanced_data_index(y, classes):
                 c1[y[i]]-=1
     return index
  
-    
+def applyf(f, x):
+    return f[x]
+  
 def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', load_train=True):
     '''
     x_datapath : path for X.pickle
@@ -228,7 +239,8 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', load_train
     _index2label = {k:v for k,v in l}
     index2label =  lambda x : _index2label[x]
     _labels2index = {v:k for k,v in l}
-    labels2index = lambda x : _labels2index[x]
+    # labels2index = lambda x : _labels2index[x]
+    labels2index = partial(applyf, _labels2index)
     MAX_LABELS = len(_labels2index)
 
     two_most_common = map( lambda x:x[0], s.most_common(n=2))
@@ -245,16 +257,27 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', load_train
     
     logger.info('converting to multihot')
     
-    train = multihot3D(filter_data_by_index(data['train'], index_train), NUM_NOTES) if load_train else None
-    valid = multihot3D(filter_data_by_index(data['valid'], index_valid), NUM_NOTES)
-    test = multihot3D(filter_data_by_index(data['test'], index_test), NUM_NOTES)
+    pool = Pool(20)
+    train = multihot3D(filter_data_by_index(data['train'], index_train), NUM_NOTES, pool=pool) if load_train else None
+    logging.info('train done')
+    valid = multihot3D(filter_data_by_index(data['valid'], index_valid), NUM_NOTES, pool=pool)
+    logging.info('valid done')
+    test = multihot3D(filter_data_by_index(data['test'], index_test), NUM_NOTES, pool=pool)
+    logging.info('test done')
     
     maxlen2D = lambda x : max([len(s) for s in x])
     MAX_CHORDS = max( map(maxlen2D, [train, test, valid]))
-    
-    y_train = to_categorical(map(labels2index, filter_data_by_index(labels['train'], index_train)), MAX_LABELS)
-    y_test = to_categorical(map(labels2index, filter_data_by_index(labels['test'], index_test)), MAX_LABELS)
-    y_valid = to_categorical(map(labels2index, filter_data_by_index(labels['valid'], index_valid)), MAX_LABELS)
+
+
+    logger.info('converting to categorical')
+    logger.info(labels2index('Country\n'))
+    y_train = to_categorical(pool.map(labels2index, filter_data_by_index(labels['train'], index_train)), MAX_LABELS)
+    logging.info('train done')
+    y_test = to_categorical(pool.map(labels2index, filter_data_by_index(labels['test'], index_test)), MAX_LABELS)
+    logging.info('test done')
+    y_valid = to_categorical(pool.map(labels2index, filter_data_by_index(labels['valid'], index_valid)), MAX_LABELS)
+    logging.info('valid done')
+    pool.close()
 
     log_about_data()
     
