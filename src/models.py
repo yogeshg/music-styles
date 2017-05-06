@@ -1,5 +1,5 @@
 import logging
-logging.basicConfig(level = logging.INFO , format=
+logging.basicConfig(level = logging.DEBUG, format=
         '%(asctime)s:%(levelname)s:%(name)s:%(threadName)s:line %(lineno)d: %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -12,6 +12,7 @@ import pandas as pd
 import os
 from sklearn.metrics import confusion_matrix
 import random
+from collections import Counter
 
 import keras
 from keras.layers import Input, Embedding, Conv1D, GlobalMaxPool1D, Dense, GlobalAvgPool1D, Dropout, BatchNormalization, Flatten, Activation
