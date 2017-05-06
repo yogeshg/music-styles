@@ -169,7 +169,7 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
     
 
     c = zip(train, y_train)
-    print len(t)
+    print len(c)
     random.shuffle(c)
     train = [e[0] for e in c]
     y_train = [e[1] for e in c]
