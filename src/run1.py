@@ -1,7 +1,7 @@
 from models import *
 
 def main():
-    commit_hash = save_code()
+    commit_hash = "nothing" #save_code()
     embeddings_path = '../../../chord2vec/data/chord2vec_199.npz'
     x_datapath='../data/tmp/X.pickle'
     y_datapath='../data/tmp/y.pickle'

@@ -14,7 +14,7 @@ from sklearn.metrics import confusion_matrix
 import random
 
 import keras
-from keras.layers import Input, Embedding, Conv1D, GlobalMaxPool1D, Dense, GlobalAvgPool1D, Dropout, BatchNormalization, Flatten
+from keras.layers import Input, Embedding, Conv1D, GlobalMaxPool1D, Dense, GlobalAvgPool1D, Dropout, BatchNormalization, Flatten, Activation
 from keras.layers import concatenate
 from keras.models import Model, model_from_json
 from keras.preprocessing import sequence
@@ -65,8 +65,12 @@ def get_model(embeddings=True):
     #y2 = GlobalMaxPool1D()(y1)
     #y5 = BatchNormalization()(y4)
     y2 = Flatten()(y1)
-    y3 = Dense(100, activation='relu')(y2)
-    y = Dense(MAX_LABELS, activation='sigmoid')(y3)
+    y3 = Dropout(0.5)(y2)
+    y4 = Dense(100)(y3)
+    y5 = BatchNormalization()(y4)
+    y6 = Activation('relu')(y5)
+    y7 = Dropout(0.5)(y6)
+    y = Dense(MAX_LABELS, activation='sigmoid')(y7)
     model = Model(x, y)
     adam = Adam(lr = c.lr)
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=c.metrics)
@@ -117,6 +121,20 @@ def multihot3D(x, r, maxlen=None, dtype=np.float32):
     # return square3D(x_mh, maxlen=maxlen, dtype=dtype)
 
 
+import random
+def shuffle_train_valid(xt, yt, xv, yv):
+    l1 = len(yt)
+    l2 = len(yv)
+    assert (l1 == len(xt))
+    assert (l2 == len(xv))
+    c = zip(xt+xv, yt+yv)
+    random.shuffle(c)
+    xtv, ytv = zip(*c)
+    xt = xtv[:l1]
+    xv = xtv[l1:]
+    yt = ytv[:l1]
+    yv = ytv[l1:]
+    return (xt, yt, xv, yv)
 
 def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
     '''
@@ -150,11 +168,10 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
         test = cutf( labels['test'], cut)
         labels2 = {'train':train, 'valid':valid, 'test':test}
         cPickle.dump(labels2, open(y_datapath+str(cut)+'.pickle', 'w'))
-    
-    c = zip(data['train'], labels['train'])
-    random.shuffle(c)
-    data['train'], labels['train'] = zip(*c)
-    
+
+    (data['train'], labels['train'], data['valid'], labels['valid'] ) = \
+        shuffle_train_valid( data['train'], labels['train'], data['valid'], labels['valid'] )
+
     s = set()
     for k,v in labels.iteritems():
         for y in v:
@@ -167,16 +184,13 @@ def load_data(x_datapath='data/X.pickle', y_datapath='data/y.pickle', cut=1.0):
 
     MAX_LABELS = len(_labels2index)
 
-    #train = [e[0] for e in c]
-    #y_train = [e[1] for e in c]
-
     y_train = to_categorical(map(labels2index, labels['train']), MAX_LABELS)
     y_test = to_categorical(map(labels2index, labels['test']), MAX_LABELS)
     y_valid = to_categorical(map(labels2index, labels['valid']), MAX_LABELS)
     unique, counts = np.unique(np.argmax(y_train,axis=1), return_counts=True)
     #counts = np.sqrt(counts)
     train_weights=dict(zip(unique, np.divide(np.sum(counts),counts.astype('float32'))))
-    
+
 
 
 
@@ -274,7 +288,7 @@ def run_experiment(**kwargs):
 
         save_history(h, a.getDirPath())
 
-def pred(trial_ts='20170505_123642', x_datapath='../data/X.pickle', y_datapath='../data/y.pickle', model_folder='data', save=None):
+def pred(trial_ts='20170506_005543', x_datapath='../data/X.pickle', y_datapath='../data/y.pickle', model_folder='data', save=None, max_chords=5112):
     if not os.path.exists(x_datapath) or not os.path.exists(y_datapath):
         print("data file doesn't exist")
         return
@@ -288,7 +302,7 @@ def pred(trial_ts='20170505_123642', x_datapath='../data/X.pickle', y_datapath='
         return
 
     load_data(x_datapath=x_datapath, y_datapath=y_datapath)
-    #MAX_CHORDS=5112
+    MAX_CHORDS=max_chords
     transforms = [lambda x:norm_pad(x, MAX_CHORDS), lambda y:y]
     dm_pred = DataManager(test, y_test, batch_size=c.batch_size, transforms=transforms)
     soft = model.predict_generator(generator=dm_pred.batch_generator(), steps=dm_pred.num_batches, verbose=1)
@@ -300,8 +314,7 @@ def pred(trial_ts='20170505_123642', x_datapath='../data/X.pickle', y_datapath='
             for (p,t)in zip(pred,true):
                 f.write(str(p)+","+str(t)+"\n")
 
-    cm = confusion_matrix(true, pred)
-    print cm
+    return pred, true
 
 
 def main():
@@ -314,5 +327,5 @@ def main():
     run_experiment(**locals())
 
 if __name__ == '__main__':
-    main()
-    #pred()
+    #main()
+    pred()
