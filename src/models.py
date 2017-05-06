@@ -13,7 +13,7 @@ import os
 from sklearn.metrics import confusion_matrix
 
 import keras
-from keras.layers import Input, Embedding, Conv1D, GlobalMaxPool1D, Dense, GlobalAvgPool1D, Dropout
+from keras.layers import Input, Embedding, Conv1D, GlobalMaxPool1D, Dense, GlobalAvgPool1D, Dropout, BatchNormalization
 from keras.layers import concatenate
 from keras.models import Model, model_from_json
 from keras.preprocessing import sequence
@@ -59,10 +59,12 @@ def get_model(embeddings=True):
         y1 = Dense(NUM_DIM, activation='linear', use_bias=False, weights=[M1], trainable=False)(x)
     else:
         y1 = x
-    y2 = get_conv_stack(y1, 5, range(1,4), 'relu', 0.00001, 0.5)
-    y3 = GlobalMaxPool1D()(y2)
-    y4 = Dense(100, activation='relu')(y3)
-    y = Dense(MAX_LABELS, activation='sigmoid')(y4)
+    y2 = BatchNormalization(y1)
+    y3 = get_conv_stack(y2, 5, range(1,4), 'relu', 0.00001, 0.5)
+    y4 = GlobalMaxPool1D()(y3)
+    y5 = BatchNormalization(y4)
+    y6 = Dense(100, activation='relu')(y5)
+    y = Dense(MAX_LABELS, activation='sigmoid')(y6)
     model = Model(x, y)
     adam = Adam(lr = c.lr)
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=c.metrics)

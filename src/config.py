@@ -5,4 +5,4 @@ monitor_objective = 'max'
 epochs = 200
 patience = 50
 batch_size = 256
-lr=0.01
+lr=0.001
